@@ -1,0 +1,33 @@
+{
+  "name": "pharma-delivery",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema empresarial de trazabilidad farmacéutica, logística y entregas",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,web,mobile -c blue,green,yellow \"npm run dev -w @pharma/backend\" \"npm run dev -w @pharma/web-admin\" \"npm run dev -w @pharma/mobile-expo\"",
+    "dev:backend": "npm run dev -w @pharma/backend",
+    "build:packages": "npm run build -w @pharma/types && npm run build -w @pharma/utils && npm run build -w @pharma/api-client",
+    "dev:web": "npm run build:packages && npm run dev -w @pharma/web-admin",
+    "dev:mobile": "npm run dev:lan -w @pharma/mobile-expo",
+    "dev:mobile:tunnel": "npm run dev:tunnel -w @pharma/mobile-expo",
+    "build": "npm run build -w @pharma/types && npm run build -w @pharma/utils && npm run build -w @pharma/api-client && npm run build -w @pharma/backend && npm run build -w @pharma/web-admin",
+    "db:generate": "npm run db:generate -w @pharma/backend",
+    "db:migrate": "npm run db:migrate -w @pharma/backend",
+    "db:seed": "npm run db:generate && npm run db:seed -w @pharma/backend",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.19.4"
+  }
+}
