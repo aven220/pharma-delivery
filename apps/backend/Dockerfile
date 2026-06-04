@@ -22,7 +22,9 @@ COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/package.json ./
 COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/apps/backend/docker-entrypoint.sh ./docker-entrypoint.sh
+# Monorepo: node_modules/@pharma/* son symlinks → packages/*
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 RUN mkdir -p uploads logs
 RUN chmod +x docker-entrypoint.sh
 EXPOSE 4000
