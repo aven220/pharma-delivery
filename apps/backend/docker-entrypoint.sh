@@ -1,15 +1,10 @@
 #!/bin/sh
-set -eu
+set -e
 
-echo "[entrypoint] instance=${INSTANCE_ID:-unknown}"
+echo "[entrypoint] Iniciando A-AS Delivery API..."
 
-if [ "${INSTANCE_ID:-backend-1}" = "backend-1" ]; then
-  echo "[entrypoint] Aplicando migraciones Prisma..."
-  npx prisma migrate deploy
-else
-  echo "[entrypoint] Esperando migraciones de backend-1..."
-  sleep 20
-fi
+echo "[entrypoint] Aplicando migraciones Prisma..."
+npx prisma migrate deploy
 
-echo "[entrypoint] Iniciando API..."
+echo "[entrypoint] Arrancando servidor..."
 exec node dist/index.js

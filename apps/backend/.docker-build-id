@@ -1,2 +1,2 @@
 # Incrementar en cada release crítico para invalidar caché Docker en servidores
-BUILD_ID=2026-06-04-prod-fix-3
+BUILD_ID=2026-06-04-single-backend
