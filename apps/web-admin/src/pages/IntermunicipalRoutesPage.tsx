@@ -41,6 +41,10 @@ interface Municipality {
   code?: string;
 }
 
+interface IntermunicipalRouteRow {
+  municipality: { name: string };
+}
+
 export function IntermunicipalRoutesPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
@@ -148,6 +152,12 @@ export function IntermunicipalRoutesPage() {
     onError: (error) => toast.error(getApiErrorMessage(error, 'No se pudo crear la ruta')),
   });
 
+  const todayMunicipalityNames = Array.from(
+    new Set(
+      ((routes || []) as IntermunicipalRouteRow[]).map((r) => r.municipality.name)
+    )
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,7 +194,7 @@ export function IntermunicipalRoutesPage() {
         <Card>
           <CardHeader><CardTitle>Destinos de hoy</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {[...new Set((routes || []).map((r: { municipality: { name: string } }) => r.municipality.name))].map((name) => (
+            {todayMunicipalityNames.map((name) => (
               <span key={name} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium">
                 {name}
               </span>

@@ -181,7 +181,7 @@ export function CreateUserModal({
   onCreated: () => void;
 }) {
   const mutation = useMutation({
-    mutationFn: (data: UserForm) => usersApi.create(data as Record<string, unknown>),
+    mutationFn: (data: UserForm) => usersApi.create(data as unknown as Record<string, unknown>),
     onSuccess: () => onCreated(),
   });
 

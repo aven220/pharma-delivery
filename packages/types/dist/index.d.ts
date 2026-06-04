@@ -103,6 +103,9 @@ export interface DeliveryDTO {
     };
     items: DeliveryItemDTO[];
     assignment?: AssignmentDTO | null;
+    evidenceCount?: number;
+    observations?: string | null;
+    failureReason?: string | null;
 }
 export interface DeliveryItemDTO {
     id: string;
