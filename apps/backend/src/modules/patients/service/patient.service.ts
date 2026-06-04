@@ -182,7 +182,16 @@ export class PatientService {
         return { patient, delivery: null, items: [] };
       }
 
-      const { delivery, items } = await this.createDeliveryWithItems(tx, patient.id, input);
+      const medications = input.medications;
+      const { delivery, items } = await this.createDeliveryWithItems(tx, patient.id, {
+        documentId: input.documentId,
+        documentNumber: input.documentNumber,
+        priority: input.priority,
+        scheduledDate: input.scheduledDate,
+        scheduledTime: input.scheduledTime,
+        observations: input.observations,
+        medications,
+      });
       return { patient, delivery, items };
     });
   }

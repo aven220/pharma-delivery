@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const excel_import_controller_1 = require("../controller/excel-import.controller");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
+const role_middleware_1 = require("../../../middlewares/role.middleware");
+const router = (0, express_1.Router)();
+router.use(auth_middleware_1.authMiddleware);
+router.post('/upload', (0, role_middleware_1.requirePermission)('excel.import'), excel_import_controller_1.excelUploadMiddleware, excel_import_controller_1.excelImportController.upload.bind(excel_import_controller_1.excelImportController));
+router.get('/', (0, role_middleware_1.requirePermission)('excel.read', 'excel.import'), excel_import_controller_1.excelImportController.list.bind(excel_import_controller_1.excelImportController));
+router.get('/:id', (0, role_middleware_1.requirePermission)('excel.read', 'excel.import'), excel_import_controller_1.excelImportController.getById.bind(excel_import_controller_1.excelImportController));
+router.delete('/:id', (0, role_middleware_1.requirePermission)('excel.delete'), excel_import_controller_1.excelImportController.delete.bind(excel_import_controller_1.excelImportController));
+router.post('/:id/reprocess', (0, role_middleware_1.requirePermission)('excel.reprocess'), excel_import_controller_1.excelImportController.reprocess.bind(excel_import_controller_1.excelImportController));
+exports.default = router;

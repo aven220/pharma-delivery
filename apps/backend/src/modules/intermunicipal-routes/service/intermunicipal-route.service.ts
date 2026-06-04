@@ -1,7 +1,9 @@
 import {
   IntermunicipalRouteHistoryAction,
   IntermunicipalRouteStatus,
+  OperationalType,
   Prisma,
+  UserStatus,
 } from '@prisma/client';
 import { prisma } from '../../../infra/database/prisma';
 import { paginate, buildPaginationMeta } from '@pharma/utils';
@@ -44,12 +46,12 @@ const FIELD_RESOLVED_DELIVERY_STATUSES = [
 
 const ROUTE_ASSIGNEE_FILTER = {
   deletedAt: null,
-  status: 'ACTIVE' as const,
+  status: UserStatus.ACTIVE,
   OR: [
-    { operationalType: { in: ['CONDUCTOR_RUTA', 'DOMICILIARIO'] as const } },
+    { operationalType: { in: [OperationalType.CONDUCTOR_RUTA, OperationalType.DOMICILIARIO] } },
     { courierProfile: { isNot: null } },
   ],
-};
+} satisfies Prisma.UserWhereInput;
 
 export class IntermunicipalRouteService {
   constructor(private io?: Server) {}

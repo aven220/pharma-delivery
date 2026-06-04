@@ -736,7 +736,7 @@ export class ReportsService {
       documento: a.courier.documentId,
       tipoOperativo: a.courier.operationalType,
       entrega: a.delivery.deliveryNumber,
-      paciente: `${a.delivery.patient.firstName} ${a.delivery.lastName}`,
+      paciente: `${a.delivery.patient.firstName} ${a.delivery.patient.lastName}`,
       estadoEntrega: label(DELIVERY_STATUS_LABELS, a.delivery.status),
       estadoAsignacion: label(ASSIGNMENT_STATUS_LABELS, a.status),
       asignada: fmtDate(a.assignedAt),

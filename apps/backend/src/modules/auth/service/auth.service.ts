@@ -86,7 +86,7 @@ export class AuthService {
 
   private generateTokens(payload: JwtPayload): AuthTokens {
     const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
-      expiresIn: env.JWT_ACCESS_EXPIRES,
+      expiresIn: env.JWT_ACCESS_EXPIRES as jwt.SignOptions['expiresIn'],
     });
     const refreshToken = crypto.randomBytes(64).toString('hex');
     return {

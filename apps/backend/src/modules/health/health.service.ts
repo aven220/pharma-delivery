@@ -45,7 +45,7 @@ export async function checkReady() {
 export async function checkHealth() {
   const ready = await checkReady();
   return {
-    status: ready.status === 'ready' ? 'ok' : 'degraded',
     ...ready,
+    status: ready.status === 'ready' ? 'ok' : 'degraded',
   };
 }

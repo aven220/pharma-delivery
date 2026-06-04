@@ -6,7 +6,7 @@ import { env } from '../../../config/env';
 import { generateHash, generateDeliveryNumber, chunkArray, sanitizePhone } from '@pharma/utils';
 import { logger } from '../../../config/logger';
 import { ValidationError, NotFoundError } from '../../../shared/errors/AppError';
-import type { DeliveryPriority } from '@prisma/client';
+import { DeliveryPriority, Prisma } from '@prisma/client';
 
 interface ExcelRow {
   Cedula?: string;
@@ -323,7 +323,7 @@ export class ExcelImportService {
         fileName,
         filePath,
         importedById: userId,
-        status: 'PENDING_CALL',
+        status: 'PENDING',
       },
     });
   }
@@ -366,12 +366,12 @@ export class ExcelImportService {
     await prisma.excelImport.update({
       where: { id },
       data: {
-        status: 'PENDING_CALL',
+        status: 'PENDING',
         processedRows: 0,
         insertedCount: 0,
         updatedCount: 0,
         errorCount: 0,
-        errors: null,
+        errors: Prisma.DbNull,
         startedAt: null,
         completedAt: null,
       },

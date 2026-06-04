@@ -1,0 +1,10 @@
+export declare const DELIVERY_STATUS_LABELS: Record<string, string>;
+export declare const PRIORITY_LABELS: Record<string, string>;
+export declare const CALL_QUEUE_STATUS_LABELS: Record<string, string>;
+export declare const CALL_MANAGEMENT_RESULT_LABELS: Record<string, string>;
+export declare const INTERMUNICIPAL_ROUTE_STATUS_LABELS: Record<string, string>;
+export declare const COURIER_ROUTE_STATUS_LABELS: Record<string, string>;
+export declare const INCIDENT_LABELS: Record<string, string>;
+export declare const ASSIGNMENT_STATUS_LABELS: Record<string, string>;
+export declare const EXCEL_IMPORT_STATUS_LABELS: Record<string, string>;
+export declare function label(map: Record<string, string>, key: string | null | undefined): string;

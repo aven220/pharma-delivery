@@ -1,0 +1,28 @@
+export declare const env: {
+    NODE_ENV: "development" | "production" | "test";
+    PORT: number;
+    INSTANCE_ID: string;
+    DATABASE_URL: string;
+    REDIS_URL: string;
+    JWT_ACCESS_SECRET: string;
+    JWT_REFRESH_SECRET: string;
+    JWT_ACCESS_EXPIRES: string;
+    JWT_REFRESH_EXPIRES: string;
+    CORS_ORIGIN: string;
+    UPLOAD_DIR: string;
+    MAX_FILE_SIZE: number;
+    RATE_LIMIT_WINDOW_MS: number;
+    RATE_LIMIT_MAX: number;
+    LOG_LEVEL: "debug" | "info" | "warn" | "error";
+    BACKUP_RETENTION_DAYS: number;
+    LOG_DIR?: string | undefined;
+    APP_PUBLIC_URL?: string | undefined;
+    SMTP_HOST?: string | undefined;
+    SMTP_PORT?: number | undefined;
+    SMTP_USER?: string | undefined;
+    SMTP_PASS?: string | undefined;
+    SMTP_FROM?: string | undefined;
+    EXPO_ACCESS_TOKEN?: string | undefined;
+};
+export declare const isDev: boolean;
+export declare const isProd: boolean;
