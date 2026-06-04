@@ -20,7 +20,9 @@ ENV NODE_ENV=production
 COPY --from=builder /app/apps/backend/dist ./dist
 COPY --from=builder /app/apps/backend/package.json ./
 COPY --from=builder /app/apps/backend/prisma ./prisma
+COPY --from=builder /app/apps/backend/docker-entrypoint.sh ./docker-entrypoint.sh
 COPY --from=builder /app/node_modules ./node_modules
-RUN mkdir -p uploads
+RUN mkdir -p uploads logs
+RUN chmod +x docker-entrypoint.sh
 EXPOSE 4000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
