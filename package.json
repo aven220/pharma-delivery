@@ -20,6 +20,9 @@
     "db:seed": "npm run db:generate && npm run db:seed -w @pharma/backend",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "docker:prod": "docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down",
+    "backup:run": "docker compose -f docker-compose.prod.yml exec backup /usr/local/bin/pharma-backup.sh",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },

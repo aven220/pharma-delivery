@@ -68,6 +68,7 @@ export default function DeliveryDetailScreen() {
   const [photos, setPhotos] = useState<DeliveryPhoto[]>([]);
   const [online, setOnline] = useState(true);
   const [gps, setGps] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [incidentPickerOpen, setIncidentPickerOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState('');
   const [incidentNotes, setIncidentNotes] = useState('');
@@ -109,39 +110,76 @@ export default function DeliveryDetailScreen() {
     await refreshPhotos();
   }, [id, refreshPhotos]);
 
+  const captureGps = useCallback(async (showError = false) => {
+    if (!id) return;
+
+    try {
+      setGpsError(null);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const message = 'Permiso de ubicación denegado. Actívelo en ajustes del dispositivo.';
+        setGpsError(message);
+        if (showError) Alert.alert('GPS', message);
+        return;
+      }
+
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        const message = 'Active la ubicación (GPS) del dispositivo e intente de nuevo.';
+        setGpsError(message);
+        if (showError) Alert.alert('GPS no disponible', message);
+        return;
+      }
+
+      let location: Location.LocationObject | null = null;
+      try {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      } catch {
+        location = await Location.getLastKnownPositionAsync();
+      }
+
+      if (!location) {
+        const message = 'No se pudo obtener la ubicación. Intente al aire libre o espere unos segundos.';
+        setGpsError(message);
+        if (showError) Alert.alert('GPS no disponible', message);
+        return;
+      }
+
+      const coords = {
+        lat: location.coords.latitude,
+        lng: location.coords.longitude,
+        accuracy: location.coords.accuracy ?? 0,
+      };
+      setGps(coords);
+      emitGpsUpdate(coords.lat, coords.lng, id);
+
+      const connected = await isOnline();
+      if (connected) {
+        try {
+          await sendGpsLog({ ...coords, deliveryId: id });
+        } catch {
+          await saveLocalGpsLog(id, coords.lat, coords.lng, coords.accuracy);
+          await enqueueSyncItem('GPS', { deliveryId: id, ...coords });
+        }
+      } else {
+        await saveLocalGpsLog(id, coords.lat, coords.lng, coords.accuracy);
+        await enqueueSyncItem('GPS', { deliveryId: id, ...coords });
+      }
+    } catch {
+      const message = 'No se pudo capturar la ubicación. Verifique GPS y permisos.';
+      setGpsError(message);
+      if (showError) Alert.alert('GPS no disponible', message);
+    }
+  }, [id]);
+
   useFocusEffect(
     useCallback(() => {
       loadDelivery();
-      captureGps();
-    }, [loadDelivery])
+      void captureGps(false);
+    }, [loadDelivery, captureGps])
   );
-
-  const captureGps = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') return;
-
-    const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    const coords = {
-      lat: location.coords.latitude,
-      lng: location.coords.longitude,
-      accuracy: location.coords.accuracy ?? 0,
-    };
-    setGps(coords);
-    emitGpsUpdate(coords.lat, coords.lng, id);
-
-    const online = await isOnline();
-    if (online) {
-      try {
-        await sendGpsLog({ ...coords, deliveryId: id });
-      } catch {
-        await saveLocalGpsLog(id!, coords.lat, coords.lng, coords.accuracy);
-        await enqueueSyncItem('GPS', { deliveryId: id, ...coords });
-      }
-    } else {
-      await saveLocalGpsLog(id!, coords.lat, coords.lng, coords.accuracy);
-      await enqueueSyncItem('GPS', { deliveryId: id, ...coords });
-    }
-  };
 
   const uploadPhoto = async (asset: ImagePicker.ImagePickerAsset) => {
     if (photos.length >= MAX_PHOTOS) {
@@ -405,9 +443,12 @@ export default function DeliveryDetailScreen() {
             {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)} (±{gps.accuracy.toFixed(0)} m)
           </Text>
         ) : (
-          <TouchableOpacity style={styles.actionBtn} onPress={captureGps}>
-            <Text style={styles.actionText}>Capturar GPS</Text>
-          </TouchableOpacity>
+          <>
+            {gpsError ? <Text style={styles.gpsError}>{gpsError}</Text> : null}
+            <TouchableOpacity style={styles.actionBtn} onPress={() => void captureGps(true)}>
+              <Text style={styles.actionText}>Capturar GPS</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -574,6 +615,7 @@ const styles = StyleSheet.create({
   status: { fontSize: 14, fontWeight: '600', marginTop: 8, color: '#334155' },
   sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
   hint: { fontSize: 12, color: '#64748b', marginBottom: 10 },
+  gpsError: { fontSize: 13, color: '#b45309', marginBottom: 8 },
   lockedBanner: {
     fontSize: 14,
     color: '#92400e',

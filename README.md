@@ -1,4 +1,4 @@
-# Pharma Delivery — Sistema Empresarial
+# A-AS Delivery — Sistema Empresarial de Logística Farmacéutica
 
 Sistema completo de trazabilidad farmacéutica, logística, entregas, control de domiciliarios, GPS, llamadas, incidencias, sincronización offline y dashboard administrativo en tiempo real.
 
@@ -8,8 +8,8 @@ Sistema completo de trazabilidad farmacéutica, logística, entregas, control de
 |------|-------------|
 | Backend | Node.js, Express, TypeScript, Prisma, PostgreSQL, Redis, Socket.io, JWT |
 | Web Admin | React 19, Vite, Tailwind, Shadcn-style UI, Zustand, React Query |
-| Mobile | Expo SDK 54, React Native 0.81, Expo Router, SQLite offline-first |
-| Infra | Docker, Docker Compose, EAS Build |
+| Mobile | Expo SDK 54, React Native, Expo Router, SQLite offline-first |
+| Infra prod | Docker Compose, NGINX (HA), backups cron, Winston logs |
 
 ## Estructura Monorepo
 
@@ -21,21 +21,29 @@ pharma-delivery/
 │   └── mobile-expo/      # App domiciliarios
 ├── packages/
 │   ├── types/            # Tipos compartidos
-│   ├── utils/            # Utilidades (hash, paginación)
+│   ├── utils/            # Utilidades
 │   ├── api-client/       # Cliente HTTP con refresh token
 │   └── ui/               # Componentes compartidos
-├── docker-compose.yml
-└── package.json
+├── infra/nginx/          # Configuración balanceador producción
+├── ops/backup/           # Scripts backup / restore PostgreSQL
+├── docker-compose.yml    # Desarrollo local
+├── docker-compose.prod.yml
+├── .env.production.example
+└── docs/DEPLOYMENT.md    # Guía paso a paso producción
 ```
+
+---
 
 ## Requisitos
 
 - Node.js >= 20.19.4
 - npm >= 10
-- Docker & Docker Compose (opcional)
+- Docker & Docker Compose v2
 - PostgreSQL 16 + Redis 7 (si no usas Docker)
 
-## Instalación
+---
+
+## Instalación (desarrollo)
 
 ```bash
 cd pharma-delivery
@@ -46,123 +54,244 @@ npm install
 
 ```bash
 cp apps/backend/.env.example apps/backend/.env
-# Editar DATABASE_URL y JWT secrets
+# Editar DATABASE_URL y JWT secrets (mínimo 32 caracteres)
 
-# Con Docker (PostgreSQL + Redis)
-docker compose up -d postgres redis
-
-# Migraciones y seed
+docker compose up -d postgres redis   # opcional
 npm run db:generate
 npm run db:migrate
 npm run db:seed
+npm run dev:backend                   # http://localhost:4000
 ```
 
 ### Web Admin
 
 ```bash
 cp apps/web-admin/.env.example apps/web-admin/.env
-npm run dev:web
-# http://localhost:5173
+npm run dev:web                       # http://localhost:5173
 ```
 
 ### Mobile Expo
 
 ```bash
 cp apps/mobile-expo/.env.example apps/mobile-expo/.env
-# Ajustar EXPO_PUBLIC_API_URL a tu IP local para dispositivo físico
+# EXPO_PUBLIC_API_URL → IP o URL del backend (puerto 4000)
 npm run dev:mobile
 ```
 
-## Credenciales de prueba (seed)
+---
+
+## Configuración
+
+### Variables de entorno — desarrollo
+
+Ver `apps/backend/.env.example` y `apps/web-admin/.env.example`.
+
+| Variable | Descripción |
+|----------|-------------|
+| `DATABASE_URL` | Conexión PostgreSQL |
+| `REDIS_URL` | Conexión Redis |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Secretos JWT (≥32 chars) |
+| `CORS_ORIGIN` | Orígenes permitidos (admin web) |
+| `UPLOAD_DIR` | Directorio evidencias (filesystem, no SQLite) |
+| `APP_PUBLIC_URL` | URL admin (enlaces reset contraseña) |
+| `SMTP_*` | Correo recuperación contraseña |
+| `EXPO_ACCESS_TOKEN` | Push notifications Expo |
+| `LOG_LEVEL` / `LOG_DIR` | Nivel y directorio de logs |
+| `INSTANCE_ID` | Identificador instancia (HA) |
+
+### Variables de entorno — producción
+
+Copie y edite:
+
+```bash
+cp .env.production.example .env.production
+```
+
+Documentación completa en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
+## Migraciones
+
+```bash
+npm run db:migrate          # desarrollo (migrate dev)
+npm run db:generate         # regenerar cliente Prisma
+```
+
+En Docker producción, `prisma migrate deploy` se ejecuta al iniciar cada backend.
+
+---
+
+## Seed inicial
+
+```bash
+npm run db:seed
+```
 
 | Rol | Email | Password |
 |-----|-------|----------|
 | Admin | admin@pharma.local | Admin123! |
-| Domiciliario | courier@pharma.local | Courier123! |
-| Operador | operator@pharma.local | Operator123! |
+| Domiciliario | driver@pharma.local | Driver123! |
+| Auditor | auditor@pharma.local | Auditor123! |
 
-## Comandos
+---
 
-```bash
-npm run dev              # Backend + Web + Mobile en paralelo
-npm run dev:backend      # Solo API (puerto 4000)
-npm run dev:web          # Solo admin (puerto 5173)
-npm run dev:mobile       # Solo Expo
-npm run build            # Build producción
-npm run docker:up        # Levantar stack Docker completo
-npm run db:migrate       # Migraciones Prisma
-npm run db:seed          # Datos iniciales
-```
+## Docker
 
-## Docker (producción local)
+### Desarrollo local
 
 ```bash
-docker compose up -d
+npm run docker:up
 # Backend:  http://localhost:4000
 # Admin:    http://localhost:5173
 # Swagger:  http://localhost:4000/api/docs
-# Postgres: localhost:5432
-# Redis:    localhost:6379
 ```
 
-## Módulos Backend
+### Producción (alta disponibilidad)
 
-- **auth** — JWT + Refresh Token, roles y permisos
-- **deliveries** — CRUD entregas, cambio de estado con validación GPS/foto/firma
-- **excel-imports** — Carga masiva Excel, agrupación por cédula/documento, hash único, deduplicación
-- **assignments** — Asignación múltiple, reasignación, historial, notificaciones
-- **calls** — Registro llamadas, actualización teléfonos/direcciones, reagendamiento
-- **incidents** — Reporte incidencias con GPS y evidencia
-- **evidence** — Fotos y firmas con compresión Sharp
-- **gps-logs** — Trazabilidad GPS en tiempo real
-- **offline-sync** — Cola de sincronización offline desde mobile
-- **dashboard** — Estadísticas, gráficas, rendimiento operadores/domiciliarios
+```bash
+cp .env.production.example .env.production
+# Editar secretos y URLs
 
-## Importación Excel
+npm run docker:prod
+# API (NGINX):  http://localhost:8080
+# Admin web:    http://localhost:8081
+# Health:       http://localhost:8080/health
+```
 
-Columnas soportadas:
+Arquitectura: **2 backends** + **NGINX** + **PostgreSQL** + **Redis** + **backup cron**.
 
-`Cedula`, `NroDocumento`, `Nombre`, `Apellido`, `Telefono`, `Direccion`, `Ciudad`, `Barrio`, `CodigoMedicamento`, `Medicamento`, `Cantidad`, `Lote`, `Prioridad`, `FechaEntrega`, `HoraEntrega`, `Observaciones`
+Detalle completo: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-**Agrupación:** Un paciente con varios medicamentos genera **un delivery** con **varios delivery_items**, agrupados por `Cedula + NroDocumento`.
+---
 
-## Mobile Offline-First
+## Backups
 
-- SQLite local: `deliveries`, `patients`, `sync_queue`, `incidents`, `gps_logs`, `evidence`
-- Cola offline con reintentos automáticos
+Backups automáticos diarios (02:00) del contenedor `backup`.
+
+```bash
+npm run backup:run    # backup manual
+```
+
+Archivos: volumen `postgres_backups` → `/backups/pharma_delivery_*.sql.gz`
+
+Retención configurable: `BACKUP_RETENTION_DAYS` (default 14).
+
+---
+
+## Restore
+
+```bash
+docker compose -f docker-compose.prod.yml exec backup ls /backups
+docker compose -f docker-compose.prod.yml exec backup \
+  /usr/local/bin/pharma-restore.sh /backups/pharma_delivery_YYYYMMDD_HHMMSS.sql.gz
+docker compose -f docker-compose.prod.yml restart backend-1 backend-2
+```
+
+Ver [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) para procedimiento completo.
+
+---
+
+## Actualizaciones
+
+```bash
+git pull
+npm run docker:prod
+```
+
+Migraciones se aplican al reiniciar backends. Reconstruya `web-admin` si cambió `VITE_API_URL`.
+
+---
+
+## Comandos útiles
+
+```bash
+npm run dev              # Backend + Web + Mobile
+npm run dev:backend      # Solo API (4000)
+npm run dev:web          # Solo admin (5173)
+npm run build            # Build producción
+npm run docker:prod:down # Detener stack prod
+npm run typecheck        # Verificación TypeScript
+```
+
+---
+
+## Health checks y monitoreo
+
+| Endpoint | Propósito |
+|----------|-----------|
+| `GET /live` | Proceso vivo (liveness) |
+| `GET /ready` | Postgres + Redis OK (readiness) |
+| `GET /health` | Estado agregado |
+| `GET /metrics` | Métricas Prometheus básicas |
+
+Logs JSON en producción (`LOG_DIR=/app/logs`). Consulte logs:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f backend-1 nginx
+```
+
+---
+
+## Seguridad empresarial
+
+- Helmet, rate limiting, CORS restrictivo en producción
+- JWT access (15m) + refresh (7d) con revocación
+- RBAC granular (roles y permisos)
+- Auditoría completa (`/api/audit-logs`, panel web `/audit`)
+- Recuperación de contraseña por correo (`/forgot-password`, `/reset-password`)
+- Validación Zod en endpoints
+- Evidencias (fotos/firmas) en **filesystem** (`UPLOAD_DIR`), no en SQLite móvil para persistencia servidor
+
+---
+
+## Notificaciones
+
+- **Centro web**: `/notifications` en admin
+- **Push móvil**: Expo (`EXPO_ACCESS_TOKEN` + registro automático al iniciar sesión)
+- API: `GET /api/notifications`, `PATCH /api/notifications/read-all`
+
+---
+
+## Mobile offline-first
+
+- SQLite local para cola offline y cache
 - Sincronización al reconectar
-- Validación: no permite ENTREGADO sin foto + firma + GPS
+- Validación: ENTREGADO requiere foto + firma + GPS
+- Push token registrado en `_layout.tsx` al autenticarse
 
-## Socket.io Events
+---
 
-- `delivery.created`, `delivery.updated`, `delivery.completed`
-- `assignment.created`, `assignment.updated`
-- `incident.created`
-- `gps:update` / `courier:location`
-
-## EAS Build (Mobile)
+## EAS Build (APK/AAB)
 
 ```bash
 cd apps/mobile-expo
-npx eas build --platform android --profile preview    # APK
-npx eas build --platform android --profile production # AAB
-npx eas build --platform ios --profile production
+npm run build:apk       # preview APK
+# EXPO_PUBLIC_API_URL=https://api.tu-dominio.com
 ```
 
-Configurar `projectId` en `app.json` → `extra.eas.projectId`.
+---
 
 ## API Docs
 
-Swagger disponible en: `http://localhost:4000/api/docs`
+Swagger: `http://localhost:4000/api/docs`
 
-## Seguridad
+---
 
-- Helmet, Rate Limiting, CORS
-- JWT Access (15m) + Refresh (7d)
-- RBAC con roles y permisos granulares
-- Auditoría de acciones
-- Validación Zod en todos los endpoints
-- Compresión de imágenes con Sharp
+## Solución de problemas
+
+| Problema | Acción |
+|----------|--------|
+| Admin: "verifique backend activo" | Postgres + Redis + backend :4000 activos |
+| `/ready` 503 | Revisar logs postgres/redis |
+| CORS error | Ajustar `CORS_ORIGIN` |
+| Reset password sin email | Configurar `SMTP_*` o revisar logs backend |
+| Socket.io inestable | Mantener `ip_hash` en NGINX |
+| Build TS6059 seed | Ya excluido de `tsconfig` backend |
+
+Más detalle: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
 
 ## Licencia
 

@@ -169,3 +169,21 @@ export const excelApiExtended = {
   delete: (id: string) => api.delete(`/api/excel-imports/${id}`),
   reprocess: (id: string) => api.post(`/api/excel-imports/${id}/reprocess`),
 };
+
+export const authApi = {
+  forgotPassword: (email: string) =>
+    api.post('/api/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) =>
+    api.post('/api/auth/reset-password', { token, password }),
+};
+
+export const notificationsApi = {
+  list: (params?: Record<string, unknown>) => api.get('/api/notifications', { params }),
+  unreadCount: () => api.get('/api/notifications/unread-count'),
+  markRead: (id: string) => api.patch(`/api/notifications/${id}/read`),
+  markAllRead: () => api.patch('/api/notifications/read-all'),
+};
+
+export const auditApi = {
+  list: (params?: Record<string, unknown>) => api.get('/api/audit-logs', { params }),
+};

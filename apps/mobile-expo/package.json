@@ -11,14 +11,16 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:apk": "eas build --platform android --profile preview",
+    "build:apk:local": "eas build --platform android --profile preview --local"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",
     "@pharma/api-client": "*",
     "@pharma/types": "*",
-    "@react-navigation/native": "^7.0.0",
     "@react-native/virtualized-lists": "0.81.5",
+    "@react-navigation/native": "^7.0.0",
     "@tanstack/react-query": "^5.59.0",
     "axios": "^1.7.0",
     "expo": "~54.0.0",
@@ -56,6 +58,7 @@
     "@babel/core": "^7.26.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.10",
+    "eas-cli": "^16.32.0",
     "typescript": "~5.9.2"
   }
 }

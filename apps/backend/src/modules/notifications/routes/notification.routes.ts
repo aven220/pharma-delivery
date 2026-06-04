@@ -26,10 +26,33 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
+router.get('/unread-count', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const count = await prisma.notification.count({
+      where: { userId: req.user!.sub, isRead: false },
+    });
+    res.json({ success: true, data: { count } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch('/read-all', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user!.sub, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.patch('/:id/read', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const notification = await prisma.notification.update({
-      where: { id: req.params.id, userId: req.user!.sub },
+      where: { id: req.params.id as string, userId: req.user!.sub },
       data: { isRead: true, readAt: new Date() },
     });
     res.json({ success: true, data: notification });

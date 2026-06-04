@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EvidenceType = exports.IncidentType = exports.CallResult = exports.AssignmentStatus = exports.DeliveryPriority = exports.DeliveryStatus = exports.UserStatus = void 0;
+exports.BrandConfig = exports.EvidenceType = exports.IncidentType = exports.CallResult = exports.AssignmentStatus = exports.DeliveryPriority = exports.DeliveryStatus = exports.UserStatus = void 0;
 var UserStatus;
 (function (UserStatus) {
     UserStatus["ACTIVE"] = "ACTIVE";
@@ -57,3 +57,5 @@ var EvidenceType;
     EvidenceType["SIGNATURE"] = "SIGNATURE";
     EvidenceType["DOCUMENT"] = "DOCUMENT";
 })(EvidenceType || (exports.EvidenceType = EvidenceType = {}));
+var brand_1 = require("./brand");
+Object.defineProperty(exports, "BrandConfig", { enumerable: true, get: function () { return brand_1.BrandConfig; } });

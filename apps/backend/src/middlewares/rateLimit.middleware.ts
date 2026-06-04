@@ -7,7 +7,9 @@ export const globalRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests' },
-  skip: (req) => req.path === '/health' || req.path.startsWith('/api/auth'),
+  skip: (req) =>
+    ['/health', '/live', '/ready', '/metrics'].includes(req.path) ||
+    req.path.startsWith('/api/auth'),
 });
 
 export const authRateLimiter = rateLimit({

@@ -19,6 +19,8 @@ import {
   FileDown,
   MapPinned,
   PackageCheck,
+  Bell,
+  Shield,
 } from 'lucide-react';
 
 interface NavItem {
@@ -49,6 +51,8 @@ export function AdminLayout() {
     { to: '/intermunicipal-routes', icon: MapPinned, label: 'Rutas intermunicipales', show: hasPermission('intermunicipal_routes.read', 'deliveries.read') },
     { to: '/couriers', icon: MapPinned, label: 'Domiciliarios', show: hasPermission('couriers.read', 'dashboard.read') },
     { to: '/reports', icon: FileDown, label: 'Reportes', show: hasPermission('reports.export', 'dashboard.read') },
+    { to: '/notifications', icon: Bell, label: 'Notificaciones', show: true },
+    { to: '/audit', icon: Shield, label: 'Auditoría', show: hasPermission('audit.read', 'dashboard.read') },
   ].filter((item) => item.show);
 
   const handleLogout = () => {

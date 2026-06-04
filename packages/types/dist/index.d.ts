@@ -83,6 +83,7 @@ export interface UserDTO {
         id: string;
         name: string;
     };
+    operationalType?: 'DOMICILIARIO' | 'CONDUCTOR_RUTA';
     permissions: string[];
 }
 export interface DeliveryDTO {
@@ -208,3 +209,5 @@ export interface SocketEvents {
         type: IncidentType;
     };
 }
+export { BrandConfig } from './brand';
+export type { BrandConfigType } from './brand';

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/auth.store';
 import { startAutoSync, stopAutoSync, performFullSync } from '../sync/syncManager';
 import { connectSocket, disconnectSocket } from '../sockets/client';
 import { ensureValidSession } from '../services/api';
+import { registerPushToken } from '../services/pushRegistration';
 import { getDatabase } from '../database';
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (cancelled || !ok) return;
       startAutoSync();
       connectSocket();
+      await registerPushToken().catch(() => {});
       await performFullSync().catch(() => {});
     })();
 

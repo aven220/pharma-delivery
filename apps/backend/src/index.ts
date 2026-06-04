@@ -13,8 +13,10 @@ import { connectRedis, disconnectRedis } from './infra/redis/client';
 import { ensureUploadDir } from './infra/storage/fileStorage';
 import { errorHandler } from './middlewares/errorHandler';
 import { globalRateLimiter } from './middlewares/rateLimit.middleware';
+import { requestLogger } from './middlewares/requestLogger.middleware';
 import { authMiddleware } from './middlewares/auth.middleware';
 import { setupSocketIO } from './sockets';
+import healthRoutes from './modules/health/health.routes';
 
 import authRoutes from './modules/auth/routes/auth.routes';
 import { createDeliveryRoutes } from './modules/deliveries/routes/delivery.routes';
@@ -25,6 +27,7 @@ import { createIncidentRoutes, createEvidenceRoutes } from './modules/incidents/
 import { createOfflineSyncRoutes } from './modules/offline-sync/routes/offline-sync.routes';
 import gpsRoutes from './modules/gps-logs/routes/gps.routes';
 import dashboardRoutes from './modules/audit-logs/routes/dashboard.routes';
+import auditRoutes from './modules/audit-logs/routes/audit.routes';
 import userRoutes from './modules/users/routes/user.routes';
 import roleRoutes from './modules/roles/routes/role.routes';
 import patientRoutes from './modules/patients/routes/patient.routes';
@@ -47,13 +50,14 @@ const io = new Server(httpServer, {
 
 setupSocketIO(io);
 
+app.use(requestLogger);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','), credentials: true }));
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.use(healthRoutes);
 
 app.use(globalRateLimiter);
 
@@ -88,6 +92,7 @@ app.use('/api/evidence', authMiddleware, createEvidenceRoutes());
 app.use('/api/offline-sync', authMiddleware, createOfflineSyncRoutes(io));
 app.use('/api/gps', authMiddleware, gpsRoutes);
 app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/audit-logs', authMiddleware, auditRoutes);
 app.use('/api/users', authMiddleware, userRoutes);
 app.use('/api/roles', authMiddleware, roleRoutes);
 app.use('/api/patients', authMiddleware, patientRoutes);

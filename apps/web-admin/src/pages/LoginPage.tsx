@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { Eye, EyeOff } from 'lucide-react';
 import { pharmaClient } from '@/services/api';
@@ -89,6 +89,11 @@ export function LoginPage() {
             <Button type="submit" className="w-full" disabled={mutation.isPending}>
               {mutation.isPending ? 'Ingresando...' : 'Ingresar'}
             </Button>
+            <p className="text-center text-sm">
+              <Link to="/forgot-password" className="text-primary hover:underline">
+                ¿Olvidó su contraseña?
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

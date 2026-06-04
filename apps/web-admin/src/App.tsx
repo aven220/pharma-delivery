@@ -4,6 +4,10 @@ import { useAuthStore } from '@/store/auth.store';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { ProtectedPermissionRoute } from '@/components/PermissionGate';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
+import { NotificationsPage } from '@/pages/NotificationsPage';
+import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DeliveriesPage } from '@/pages/DeliveriesPage';
 import { ExcelImportPage } from '@/pages/ExcelImportPage';
@@ -42,6 +46,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/"
             element={
@@ -113,6 +119,12 @@ export default function App() {
             <Route path="reports" element={
               <ProtectedPermissionRoute permissions={['reports.export', 'dashboard.read']} roles={['ADMIN', 'SUPERVISOR']}>
                 <ReportsPage />
+              </ProtectedPermissionRoute>
+            } />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="audit" element={
+              <ProtectedPermissionRoute permissions={['audit.read', 'dashboard.read']}>
+                <AuditLogsPage />
               </ProtectedPermissionRoute>
             } />
             <Route path="couriers" element={

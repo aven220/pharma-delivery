@@ -5,6 +5,7 @@ import type { AssignmentStatus } from '@prisma/client';
 import type { Server } from 'socket.io';
 import { deliveryStatusService } from '../../deliveries/service/delivery-status.service';
 import { courierRouteService } from '../../couriers/service/courier-route.service';
+import { sendExpoPush } from '../../notifications/push.service';
 
 export class AssignmentService {
   constructor(private io?: Server) {}
@@ -170,6 +171,12 @@ export class AssignmentService {
       };
       this.io?.to(`user:${courierId}`).emit('assignment.created', payload);
       this.io?.to('admin').emit('assignment.created', payload);
+      void sendExpoPush({
+        userId: courierId,
+        title: `${BrandConfig.notificationPrefix}: Nueva asignación`,
+        body: `Entrega ${a.delivery.deliveryNumber} asignada`,
+        data: { deliveryId: a.deliveryId, assignmentId: a.id },
+      });
     });
 
     return assignments;
