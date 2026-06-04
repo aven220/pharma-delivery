@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { IntermunicipalRouteStatus } from '@prisma/client';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission, requireRole } from '../../../middlewares/role.middleware';
 import { routeMunicipalityService } from '../service/route-municipality.service';
@@ -71,7 +71,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requireRole('ADMIN'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await routeMunicipalityService.update(req.params.id, req.body);
+        const data = await routeMunicipalityService.update(routeParam(req.params.id), req.body);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -84,7 +84,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requireRole('ADMIN'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await routeMunicipalityService.setActive(req.params.id, req.body.isActive !== false);
+        const data = await routeMunicipalityService.setActive(routeParam(req.params.id), req.body.isActive !== false);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -123,7 +123,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.read', 'intermunicipal_routes.write'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.getDriverActiveRoutes(req.params.driverId);
+        const data = await service.getDriverActiveRoutes(routeParam(req.params.driverId));
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -173,7 +173,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.read', 'courier.app', 'deliveries.read', 'calls.read'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.getById(req.params.id);
+        const data = await service.getById(routeParam(req.params.id));
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -200,7 +200,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.write'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.update(req.params.id, req.body, req.user!.sub);
+        const data = await service.update(routeParam(req.params.id), req.body, req.user!.sub);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -218,7 +218,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     validate(addDeliveriesSchema),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.addDeliveries(req.params.id, req.body.deliveryIds, req.user!.sub);
+        const data = await service.addDeliveries(routeParam(req.params.id), req.body.deliveryIds, req.user!.sub);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -235,7 +235,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     ),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.removeDelivery(req.params.id, req.params.deliveryId, req.user!.sub);
+        const data = await service.removeDelivery(routeParam(req.params.id), routeParam(req.params.deliveryId), req.user!.sub);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -248,7 +248,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.write'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.dispatch(req.params.id, req.user!.sub);
+        const data = await service.dispatch(routeParam(req.params.id), req.user!.sub);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -261,7 +261,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.write', 'courier.app'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.startRoute(req.params.id, req.user!.sub);
+        const data = await service.startRoute(routeParam(req.params.id), req.user!.sub);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -277,7 +277,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
         const user = req.user!;
         const canManageRoutes =
           user.role === 'ADMIN' || user.permissions.includes('intermunicipal_routes.write');
-        const data = await service.close(req.params.id, user.sub, req.body.notes, {
+        const data = await service.close(routeParam(req.params.id), user.sub, req.body.notes, {
           requireAssignedDriver: !canManageRoutes,
         });
         res.json({ success: true, data });
@@ -292,7 +292,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.write'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.cancel(req.params.id, req.user!.sub, req.body.notes);
+        const data = await service.cancel(routeParam(req.params.id), req.user!.sub, req.body.notes);
         res.json({ success: true, data });
       } catch (error) {
         next(error);
@@ -306,7 +306,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
         const data = await service.transferDriver(
-          req.params.id,
+          routeParam(req.params.id),
           req.body.newDriverId,
           req.user!.sub,
           req.body.notes
@@ -323,7 +323,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.write'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.splitRoute(req.params.id, req.body, req.user!.sub);
+        const data = await service.splitRoute(routeParam(req.params.id), req.body, req.user!.sub);
         res.status(201).json({ success: true, data });
       } catch (error) {
         next(error);
@@ -336,7 +336,7 @@ export function createIntermunicipalRouteRoutes(io?: Server) {
     requirePermission('intermunicipal_routes.read'),
     async (req: AuthRequest, res: Response, next: NextFunction) => {
       try {
-        const data = await service.getHistory(req.params.id);
+        const data = await service.getHistory(routeParam(req.params.id));
         res.json({ success: true, data });
       } catch (error) {
         next(error);

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.userController = exports.UserController = void 0;
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const user_service_1 = require("../service/user.service");
 class UserController {
     async list(req, res, next) {
@@ -14,7 +15,7 @@ class UserController {
     }
     async getById(req, res, next) {
         try {
-            const user = await user_service_1.userService.getById(req.params.id);
+            const user = await user_service_1.userService.getById((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data: user });
         }
         catch (error) {
@@ -32,7 +33,7 @@ class UserController {
     }
     async update(req, res, next) {
         try {
-            const user = await user_service_1.userService.update(req.params.id, req.body);
+            const user = await user_service_1.userService.update((0, auth_middleware_1.routeParam)(req.params.id), req.body);
             res.json({ success: true, data: user });
         }
         catch (error) {
@@ -41,7 +42,7 @@ class UserController {
     }
     async activate(req, res, next) {
         try {
-            const user = await user_service_1.userService.changeStatus(req.params.id, 'ACTIVE');
+            const user = await user_service_1.userService.changeStatus((0, auth_middleware_1.routeParam)(req.params.id), 'ACTIVE');
             res.json({ success: true, data: user });
         }
         catch (error) {
@@ -50,7 +51,7 @@ class UserController {
     }
     async deactivate(req, res, next) {
         try {
-            const user = await user_service_1.userService.changeStatus(req.params.id, 'INACTIVE');
+            const user = await user_service_1.userService.changeStatus((0, auth_middleware_1.routeParam)(req.params.id), 'INACTIVE');
             res.json({ success: true, data: user });
         }
         catch (error) {
@@ -59,7 +60,7 @@ class UserController {
     }
     async resetPassword(req, res, next) {
         try {
-            const result = await user_service_1.userService.resetPassword(req.params.id, req.body.password);
+            const result = await user_service_1.userService.resetPassword((0, auth_middleware_1.routeParam)(req.params.id), req.body.password);
             res.json({ success: true, data: result });
         }
         catch (error) {
@@ -68,7 +69,7 @@ class UserController {
     }
     async changeStatus(req, res, next) {
         try {
-            const user = await user_service_1.userService.changeStatus(req.params.id, req.body.status);
+            const user = await user_service_1.userService.changeStatus((0, auth_middleware_1.routeParam)(req.params.id), req.body.status);
             res.json({ success: true, data: user });
         }
         catch (error) {

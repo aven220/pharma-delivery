@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeliveryController = void 0;
 exports.createDeliveryController = createDeliveryController;
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const delivery_service_1 = require("../service/delivery.service");
 const deliveryService = new delivery_service_1.DeliveryService();
 class DeliveryController {
@@ -20,7 +21,7 @@ class DeliveryController {
     }
     async getById(req, res, next) {
         try {
-            const delivery = await deliveryService.getById(req.params.id);
+            const delivery = await deliveryService.getById((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data: delivery });
         }
         catch (error) {
@@ -29,7 +30,7 @@ class DeliveryController {
     }
     async updateStatus(req, res, next) {
         try {
-            const delivery = await deliveryService.updateStatus(req.params.id, req.user.sub, req.body);
+            const delivery = await deliveryService.updateStatus((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub, req.body);
             const event = delivery.status === 'DELIVERED'
                 ? 'delivery.completed'
                 : 'delivery.updated';

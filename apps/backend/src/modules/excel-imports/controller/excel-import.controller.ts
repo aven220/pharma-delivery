@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import multer from 'multer';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { excelImportService } from '../service/excel-import.service';
 import { saveExcelFile } from '../../../infra/storage/fileStorage';
 import { env } from '../../../config/env';
@@ -65,7 +65,7 @@ export class ExcelImportController {
 
   async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const record = await excelImportService.getImport(req.params.id);
+      const record = await excelImportService.getImport(routeParam(req.params.id));
       res.json({ success: true, data: record });
     } catch (error) {
       next(error);
@@ -74,7 +74,7 @@ export class ExcelImportController {
 
   async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const result = await excelImportService.deleteImport(req.params.id);
+      const result = await excelImportService.deleteImport(routeParam(req.params.id));
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -83,7 +83,7 @@ export class ExcelImportController {
 
   async reprocess(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const record = await excelImportService.reprocessImport(req.params.id);
+      const record = await excelImportService.reprocessImport(routeParam(req.params.id));
       res.status(202).json({ success: true, data: record, message: 'Reprocessing started' });
     } catch (error) {
       next(error);

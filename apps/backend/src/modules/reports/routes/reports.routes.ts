@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { REPORT_TYPES, reportsService } from '../service/reports.service';
 
@@ -11,7 +11,7 @@ router.get('/types', requirePermission('reports.export', 'dashboard.read'), (_re
 
 router.get('/:type', requirePermission('reports.export', 'dashboard.read'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const type = req.params.type as (typeof REPORT_TYPES)[number];
+    const type = routeParam(req.params.type) as (typeof REPORT_TYPES)[number];
     if (!REPORT_TYPES.includes(type)) {
       res.status(400).json({ success: false, message: 'Tipo de reporte no válido' });
       return;

@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.excelImportController = exports.ExcelImportController = exports.excelUploadMiddleware = void 0;
 const multer_1 = __importDefault(require("multer"));
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const excel_import_service_1 = require("../service/excel-import.service");
 const fileStorage_1 = require("../../../infra/storage/fileStorage");
 const env_1 = require("../../../config/env");
@@ -60,7 +61,7 @@ class ExcelImportController {
     }
     async getById(req, res, next) {
         try {
-            const record = await excel_import_service_1.excelImportService.getImport(req.params.id);
+            const record = await excel_import_service_1.excelImportService.getImport((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data: record });
         }
         catch (error) {
@@ -69,7 +70,7 @@ class ExcelImportController {
     }
     async delete(req, res, next) {
         try {
-            const result = await excel_import_service_1.excelImportService.deleteImport(req.params.id);
+            const result = await excel_import_service_1.excelImportService.deleteImport((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data: result });
         }
         catch (error) {
@@ -78,7 +79,7 @@ class ExcelImportController {
     }
     async reprocess(req, res, next) {
         try {
-            const record = await excel_import_service_1.excelImportService.reprocessImport(req.params.id);
+            const record = await excel_import_service_1.excelImportService.reprocessImport((0, auth_middleware_1.routeParam)(req.params.id));
             res.status(202).json({ success: true, data: record, message: 'Reprocessing started' });
         }
         catch (error) {

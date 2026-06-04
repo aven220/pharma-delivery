@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { CallManagementResult, CallQueueStatus, CallResult, DeactivationReason, PendingSubreason } from '@prisma/client';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { callService } from '../service/call.service';
@@ -108,7 +108,7 @@ router.patch('/my/:id', requirePermission('calls.write'), validate(updateAssignm
   try {
     const isAdmin = req.user!.role === 'ADMIN';
     const data = await callAssignmentService.updateAssignment(
-      req.params.id,
+      routeParam(req.params.id),
       req.user!.sub,
       req.body,
       isAdmin ? { bypassOperatorCheck: true, actingUserId: req.user!.sub } : undefined

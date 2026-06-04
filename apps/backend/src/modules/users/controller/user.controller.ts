@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { userService } from '../service/user.service';
 
 export class UserController {
@@ -14,7 +14,7 @@ export class UserController {
 
   async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const user = await userService.getById(req.params.id);
+      const user = await userService.getById(routeParam(req.params.id));
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -32,7 +32,7 @@ export class UserController {
 
   async update(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const user = await userService.update(req.params.id, req.body);
+      const user = await userService.update(routeParam(req.params.id), req.body);
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -41,7 +41,7 @@ export class UserController {
 
   async activate(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const user = await userService.changeStatus(req.params.id, 'ACTIVE');
+      const user = await userService.changeStatus(routeParam(req.params.id), 'ACTIVE');
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -50,7 +50,7 @@ export class UserController {
 
   async deactivate(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const user = await userService.changeStatus(req.params.id, 'INACTIVE');
+      const user = await userService.changeStatus(routeParam(req.params.id), 'INACTIVE');
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -59,7 +59,7 @@ export class UserController {
 
   async resetPassword(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const result = await userService.resetPassword(req.params.id, req.body.password);
+      const result = await userService.resetPassword(routeParam(req.params.id), req.body.password);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -68,7 +68,7 @@ export class UserController {
 
   async changeStatus(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const user = await userService.changeStatus(req.params.id, req.body.status);
+      const user = await userService.changeStatus(routeParam(req.params.id), req.body.status);
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);

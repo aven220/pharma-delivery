@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { z } from 'zod';
 import { IncidentType, EvidenceType } from '@prisma/client';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { createIncidentService, evidenceService } from '../service/incident.service';
@@ -83,7 +83,7 @@ export function createEvidenceRoutes() {
 
   router.get('/delivery/:deliveryId', requirePermission('deliveries.read', 'audit.read', 'dashboard.read', 'courier.app'), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const evidence = await evidenceService.listByDelivery(req.params.deliveryId);
+      const evidence = await evidenceService.listByDelivery(routeParam(req.params.deliveryId));
       res.json({ success: true, data: evidence });
     } catch (error) {
       next(error);
@@ -92,7 +92,7 @@ export function createEvidenceRoutes() {
 
   router.get('/:id/file', requirePermission('deliveries.read', 'audit.read', 'dashboard.read', 'courier.app'), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const { evidence, fullPath } = await evidenceService.getFile(req.params.id);
+      const { evidence, fullPath } = await evidenceService.getFile(routeParam(req.params.id));
       res.setHeader('Content-Type', evidence.mimeType);
       res.setHeader('Content-Disposition', `inline; filename="${evidence.fileName}"`);
       res.sendFile(path.resolve(fullPath));

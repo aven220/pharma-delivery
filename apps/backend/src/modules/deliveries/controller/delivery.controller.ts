@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { DeliveryService } from '../service/delivery.service';
 import type { Server } from 'socket.io';
 
@@ -19,7 +19,7 @@ export class DeliveryController {
 
   async getById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const delivery = await deliveryService.getById(req.params.id);
+      const delivery = await deliveryService.getById(routeParam(req.params.id));
       res.json({ success: true, data: delivery });
     } catch (error) {
       next(error);
@@ -29,7 +29,7 @@ export class DeliveryController {
   async updateStatus(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const delivery = await deliveryService.updateStatus(
-        req.params.id,
+        routeParam(req.params.id),
         req.user!.sub,
         req.body
       );

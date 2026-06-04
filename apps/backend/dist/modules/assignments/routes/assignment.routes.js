@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createAssignmentRoutes = createAssignmentRoutes;
 const express_1 = require("express");
 const zod_1 = require("zod");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const assignment_service_1 = require("../service/assignment.service");
@@ -39,7 +40,7 @@ function createAssignmentRoutes(io) {
     });
     router.post('/:id/reassign', (0, role_middleware_1.requirePermission)('assignments.write'), (0, validate_middleware_1.validate)(reassignSchema), async (req, res, next) => {
         try {
-            const result = await service.reassign(req.params.id, req.body.courierId, req.user.sub, req.body.notes);
+            const result = await service.reassign((0, auth_middleware_1.routeParam)(req.params.id), req.body.courierId, req.user.sub, req.body.notes);
             res.json({ success: true, data: result });
         }
         catch (error) {
@@ -48,7 +49,7 @@ function createAssignmentRoutes(io) {
     });
     router.post('/:id/withdraw', (0, role_middleware_1.requirePermission)('assignments.write'), (0, validate_middleware_1.validate)(withdrawSchema), async (req, res, next) => {
         try {
-            const result = await service.withdraw(req.params.id, req.user.sub, req.body.notes);
+            const result = await service.withdraw((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub, req.body.notes);
             res.json({ success: true, data: result });
         }
         catch (error) {

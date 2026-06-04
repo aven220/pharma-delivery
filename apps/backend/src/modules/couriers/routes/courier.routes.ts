@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import type { Server } from 'socket.io';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { courierPanelService } from '../service/courier-panel.service';
 import { courierRouteService } from '../service/courier-route.service';
@@ -26,7 +26,7 @@ router.get('/routes', requirePermission('couriers.read', 'assignments.write', 'd
 
 router.get('/routes/today/:courierId', requirePermission('couriers.read', 'assignments.write'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const data = await courierRouteService.getTodayRoute(req.params.courierId);
+    const data = await courierRouteService.getTodayRoute(routeParam(req.params.courierId));
     res.json({ success: true, data });
   } catch (error) {
     next(error);
@@ -40,7 +40,7 @@ router.post('/routes/:id/carry-over', requirePermission('assignments.write', 'co
       res.status(400).json({ success: false, message: 'targetDate es requerido' });
       return;
     }
-    const data = await courierRouteService.carryOverPending(req.params.id, targetDate, req.user!.sub);
+    const data = await courierRouteService.carryOverPending(routeParam(req.params.id), targetDate, req.user!.sub);
     io?.to(`user:${data.previousRoute.courierId}`).emit('route.carry_over', {
       routeId: data.nextRoute.id,
       movedCount: data.movedCount,
@@ -56,7 +56,7 @@ router.post('/routes/:id/carry-over', requirePermission('assignments.write', 'co
 router.post('/routes/:id/close', requirePermission('assignments.write', 'couriers.read'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { notes } = req.body as { notes?: string };
-    const data = await courierRouteService.closeRoute(req.params.id, req.user!.sub, notes);
+    const data = await courierRouteService.closeRoute(routeParam(req.params.id), req.user!.sub, notes);
     res.json({ success: true, data });
   } catch (error) {
     next(error);
@@ -86,7 +86,7 @@ router.get('/panel', requirePermission('couriers.read', 'dashboard.read'), async
 
 router.get('/:id', requirePermission('couriers.read', 'dashboard.read'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const data = await courierPanelService.getCourierDetail(req.params.id);
+    const data = await courierPanelService.getCourierDetail(routeParam(req.params.id));
     res.json({ success: true, data });
   } catch (error) {
     next(error);

@@ -10,6 +10,7 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const incident_service_1 = require("../service/incident.service");
@@ -80,7 +81,7 @@ function createEvidenceRoutes() {
     });
     router.get('/delivery/:deliveryId', (0, role_middleware_1.requirePermission)('deliveries.read', 'audit.read', 'dashboard.read', 'courier.app'), async (req, res, next) => {
         try {
-            const evidence = await incident_service_1.evidenceService.listByDelivery(req.params.deliveryId);
+            const evidence = await incident_service_1.evidenceService.listByDelivery((0, auth_middleware_1.routeParam)(req.params.deliveryId));
             res.json({ success: true, data: evidence });
         }
         catch (error) {
@@ -89,7 +90,7 @@ function createEvidenceRoutes() {
     });
     router.get('/:id/file', (0, role_middleware_1.requirePermission)('deliveries.read', 'audit.read', 'dashboard.read', 'courier.app'), async (req, res, next) => {
         try {
-            const { evidence, fullPath } = await incident_service_1.evidenceService.getFile(req.params.id);
+            const { evidence, fullPath } = await incident_service_1.evidenceService.getFile((0, auth_middleware_1.routeParam)(req.params.id));
             res.setHeader('Content-Type', evidence.mimeType);
             res.setHeader('Content-Disposition', `inline; filename="${evidence.fileName}"`);
             res.sendFile(path_1.default.resolve(fullPath));

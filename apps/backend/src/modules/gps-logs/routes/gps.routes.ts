@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { prisma } from '../../../infra/database/prisma';
 
@@ -46,7 +46,7 @@ router.post('/', validate(gpsSchema), async (req: AuthRequest, res: Response, ne
 router.get('/courier/:courierId', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const logs = await prisma.gpsLog.findMany({
-      where: { userId: req.params.courierId },
+      where: { userId: routeParam(req.params.courierId) },
       orderBy: { recordedAt: 'desc' },
       take: 100,
     });

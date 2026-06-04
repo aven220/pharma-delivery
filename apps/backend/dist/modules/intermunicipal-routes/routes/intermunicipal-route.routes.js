@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createIntermunicipalRouteRoutes = createIntermunicipalRouteRoutes;
 const express_1 = require("express");
 const zod_1 = require("zod");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const route_municipality_service_1 = require("../service/route-municipality.service");
@@ -49,7 +50,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.patch('/municipalities/:id', (0, role_middleware_1.requireRole)('ADMIN'), async (req, res, next) => {
         try {
-            const data = await route_municipality_service_1.routeMunicipalityService.update(req.params.id, req.body);
+            const data = await route_municipality_service_1.routeMunicipalityService.update((0, auth_middleware_1.routeParam)(req.params.id), req.body);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -58,7 +59,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.patch('/municipalities/:id/active', (0, role_middleware_1.requireRole)('ADMIN'), async (req, res, next) => {
         try {
-            const data = await route_municipality_service_1.routeMunicipalityService.setActive(req.params.id, req.body.isActive !== false);
+            const data = await route_municipality_service_1.routeMunicipalityService.setActive((0, auth_middleware_1.routeParam)(req.params.id), req.body.isActive !== false);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -85,7 +86,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.get('/drivers/:driverId/active-routes', (0, role_middleware_1.requirePermission)('intermunicipal_routes.read', 'intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.getDriverActiveRoutes(req.params.driverId);
+            const data = await service.getDriverActiveRoutes((0, auth_middleware_1.routeParam)(req.params.driverId));
             res.json({ success: true, data });
         }
         catch (error) {
@@ -120,7 +121,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.get('/:id', (0, role_middleware_1.requirePermission)('intermunicipal_routes.read', 'courier.app', 'deliveries.read', 'calls.read'), async (req, res, next) => {
         try {
-            const data = await service.getById(req.params.id);
+            const data = await service.getById((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data });
         }
         catch (error) {
@@ -138,7 +139,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.patch('/:id', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.update(req.params.id, req.body, req.user.sub);
+            const data = await service.update((0, auth_middleware_1.routeParam)(req.params.id), req.body, req.user.sub);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -147,7 +148,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/deliveries', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write', 'intermunicipal_routes.add_deliveries', 'calls.write'), (0, validate_middleware_1.validate)(addDeliveriesSchema), async (req, res, next) => {
         try {
-            const data = await service.addDeliveries(req.params.id, req.body.deliveryIds, req.user.sub);
+            const data = await service.addDeliveries((0, auth_middleware_1.routeParam)(req.params.id), req.body.deliveryIds, req.user.sub);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -156,7 +157,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.delete('/:id/deliveries/:deliveryId', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write', 'intermunicipal_routes.add_deliveries', 'calls.write'), async (req, res, next) => {
         try {
-            const data = await service.removeDelivery(req.params.id, req.params.deliveryId, req.user.sub);
+            const data = await service.removeDelivery((0, auth_middleware_1.routeParam)(req.params.id), (0, auth_middleware_1.routeParam)(req.params.deliveryId), req.user.sub);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -165,7 +166,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/dispatch', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.dispatch(req.params.id, req.user.sub);
+            const data = await service.dispatch((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -174,7 +175,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/start', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write', 'courier.app'), async (req, res, next) => {
         try {
-            const data = await service.startRoute(req.params.id, req.user.sub);
+            const data = await service.startRoute((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -185,7 +186,7 @@ function createIntermunicipalRouteRoutes(io) {
         try {
             const user = req.user;
             const canManageRoutes = user.role === 'ADMIN' || user.permissions.includes('intermunicipal_routes.write');
-            const data = await service.close(req.params.id, user.sub, req.body.notes, {
+            const data = await service.close((0, auth_middleware_1.routeParam)(req.params.id), user.sub, req.body.notes, {
                 requireAssignedDriver: !canManageRoutes,
             });
             res.json({ success: true, data });
@@ -196,7 +197,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/cancel', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.cancel(req.params.id, req.user.sub, req.body.notes);
+            const data = await service.cancel((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub, req.body.notes);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -205,7 +206,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/transfer-driver', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.transferDriver(req.params.id, req.body.newDriverId, req.user.sub, req.body.notes);
+            const data = await service.transferDriver((0, auth_middleware_1.routeParam)(req.params.id), req.body.newDriverId, req.user.sub, req.body.notes);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -214,7 +215,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.post('/:id/split', (0, role_middleware_1.requirePermission)('intermunicipal_routes.write'), async (req, res, next) => {
         try {
-            const data = await service.splitRoute(req.params.id, req.body, req.user.sub);
+            const data = await service.splitRoute((0, auth_middleware_1.routeParam)(req.params.id), req.body, req.user.sub);
             res.status(201).json({ success: true, data });
         }
         catch (error) {
@@ -223,7 +224,7 @@ function createIntermunicipalRouteRoutes(io) {
     });
     router.get('/:id/history', (0, role_middleware_1.requirePermission)('intermunicipal_routes.read'), async (req, res, next) => {
         try {
-            const data = await service.getHistory(req.params.id);
+            const data = await service.getHistory((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data });
         }
         catch (error) {

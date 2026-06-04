@@ -84,9 +84,7 @@ class AuthService {
         };
     }
     generateTokens(payload) {
-        const accessToken = jsonwebtoken_1.default.sign(payload, env_1.env.JWT_ACCESS_SECRET, {
-            expiresIn: env_1.env.JWT_ACCESS_EXPIRES,
-        });
+        const accessToken = jsonwebtoken_1.default.sign(payload, env_1.env.JWT_ACCESS_SECRET, { expiresIn: 900 });
         const refreshToken = crypto_1.default.randomBytes(64).toString('hex');
         return {
             accessToken,

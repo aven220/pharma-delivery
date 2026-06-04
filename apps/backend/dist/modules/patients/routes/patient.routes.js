@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const patient_service_1 = require("../service/patient.service");
@@ -17,7 +18,7 @@ router.get('/', (0, role_middleware_1.requirePermission)('patients.read', 'audit
 });
 router.get('/:id', (0, role_middleware_1.requirePermission)('patients.read', 'audit.read'), (0, validate_middleware_1.validate)(patient_validators_1.patientIdSchema), async (req, res, next) => {
     try {
-        const patient = await patient_service_1.patientService.getById(req.params.id);
+        const patient = await patient_service_1.patientService.getById((0, auth_middleware_1.routeParam)(req.params.id));
         res.json({ success: true, data: patient });
     }
     catch (error) {
@@ -44,7 +45,7 @@ router.post('/deliveries/manual', (0, role_middleware_1.requirePermission)('deli
 });
 router.get('/:id/history', (0, role_middleware_1.requirePermission)('patients.read', 'audit.read', 'calls.read'), (0, validate_middleware_1.validate)(patient_validators_1.patientIdSchema), async (req, res, next) => {
     try {
-        const history = await patient_service_1.patientService.getFullHistory(req.params.id);
+        const history = await patient_service_1.patientService.getFullHistory((0, auth_middleware_1.routeParam)(req.params.id));
         res.json({ success: true, data: history });
     }
     catch (error) {

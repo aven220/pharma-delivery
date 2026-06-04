@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../../../infra/database/prisma';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 
 const router = Router();
 
@@ -52,7 +52,7 @@ router.patch('/read-all', async (req: AuthRequest, res: Response, next: NextFunc
 router.patch('/:id/read', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const notification = await prisma.notification.update({
-      where: { id: req.params.id as string, userId: req.user!.sub },
+      where: { id: routeParam(req.params.id), userId: req.user!.sub },
       data: { isRead: true, readAt: new Date() },
     });
     res.json({ success: true, data: notification });

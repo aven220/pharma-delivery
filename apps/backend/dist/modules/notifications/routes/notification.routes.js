@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("../../../infra/database/prisma");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const router = (0, express_1.Router)();
 router.get('/', async (req, res, next) => {
     try {
@@ -49,7 +50,7 @@ router.patch('/read-all', async (req, res, next) => {
 router.patch('/:id/read', async (req, res, next) => {
     try {
         const notification = await prisma_1.prisma.notification.update({
-            where: { id: req.params.id, userId: req.user.sub },
+            where: { id: (0, auth_middleware_1.routeParam)(req.params.id), userId: req.user.sub },
             data: { isRead: true, readAt: new Date() },
         });
         res.json({ success: true, data: notification });

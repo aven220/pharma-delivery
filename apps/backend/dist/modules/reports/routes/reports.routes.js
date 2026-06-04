@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const reports_service_1 = require("../service/reports.service");
 const router = (0, express_1.Router)();
@@ -9,7 +10,7 @@ router.get('/types', (0, role_middleware_1.requirePermission)('reports.export', 
 });
 router.get('/:type', (0, role_middleware_1.requirePermission)('reports.export', 'dashboard.read'), async (req, res, next) => {
     try {
-        const type = req.params.type;
+        const type = (0, auth_middleware_1.routeParam)(req.params.type);
         if (!reports_service_1.REPORT_TYPES.includes(type)) {
             res.status(400).json({ success: false, message: 'Tipo de reporte no válido' });
             return;

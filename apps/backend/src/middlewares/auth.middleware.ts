@@ -4,6 +4,12 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { UnauthorizedError } from '../shared/errors/AppError';
 
+/** Normaliza parámetros de ruta Express (string | string[] → string). */
+export function routeParam(value: string | string[] | undefined): string {
+  if (value == null) return '';
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export interface AuthRequest extends Request<Record<string, string>> {
   user?: JwtPayload;
 }

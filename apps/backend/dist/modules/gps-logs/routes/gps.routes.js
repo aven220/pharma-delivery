@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const prisma_1 = require("../../../infra/database/prisma");
 const gpsSchema = zod_1.z.object({
@@ -42,7 +43,7 @@ router.post('/', (0, validate_middleware_1.validate)(gpsSchema), async (req, res
 router.get('/courier/:courierId', async (req, res, next) => {
     try {
         const logs = await prisma_1.prisma.gpsLog.findMany({
-            where: { userId: req.params.courierId },
+            where: { userId: (0, auth_middleware_1.routeParam)(req.params.courierId) },
             orderBy: { recordedAt: 'desc' },
             take: 100,
         });

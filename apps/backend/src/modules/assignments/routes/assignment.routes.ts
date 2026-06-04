@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { createAssignmentService } from '../service/assignment.service';
@@ -48,7 +48,7 @@ export function createAssignmentRoutes(io?: Server) {
 
   router.post('/:id/reassign', requirePermission('assignments.write'), validate(reassignSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await service.reassign(req.params.id, req.body.courierId, req.user!.sub, req.body.notes);
+      const result = await service.reassign(routeParam(req.params.id), req.body.courierId, req.user!.sub, req.body.notes);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);
@@ -57,7 +57,7 @@ export function createAssignmentRoutes(io?: Server) {
 
   router.post('/:id/withdraw', requirePermission('assignments.write'), validate(withdrawSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await service.withdraw(req.params.id, req.user!.sub, req.body.notes);
+      const result = await service.withdraw(routeParam(req.params.id), req.user!.sub, req.body.notes);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

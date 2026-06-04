@@ -7,6 +7,7 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const medication_service_1 = require("../service/medication.service");
@@ -54,7 +55,7 @@ router.get('/search', (0, role_middleware_1.requirePermission)('medications.read
 });
 router.get('/by-cum/:cum', (0, role_middleware_1.requirePermission)('medications.read', 'medications.write', 'patients.write'), async (req, res, next) => {
     try {
-        const data = await medication_service_1.medicationService.getByCum(req.params.cum);
+        const data = await medication_service_1.medicationService.getByCum((0, auth_middleware_1.routeParam)(req.params.cum));
         res.json({ success: true, data });
     }
     catch (error) {
@@ -72,7 +73,7 @@ router.post('/', (0, role_middleware_1.requirePermission)('medications.write'), 
 });
 router.patch('/:id', (0, role_middleware_1.requirePermission)('medications.write'), (0, validate_middleware_1.validate)(updateSchema), async (req, res, next) => {
     try {
-        const data = await medication_service_1.medicationService.update(req.params.id, req.body);
+        const data = await medication_service_1.medicationService.update((0, auth_middleware_1.routeParam)(req.params.id), req.body);
         res.json({ success: true, data });
     }
     catch (error) {

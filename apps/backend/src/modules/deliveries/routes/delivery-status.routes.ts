@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { DeactivationReason, PendingSubreason } from '@prisma/client';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import {
@@ -33,7 +33,7 @@ router.get('/meta/reasons', (_req: AuthRequest, res: Response) => {
 
 router.get('/:id/status-history', requirePermission('deliveries.read', 'calls.read', 'audit.read'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const data = await deliveryStatusService.getHistory(req.params.id);
+    const data = await deliveryStatusService.getHistory(routeParam(req.params.id));
     res.json({ success: true, data });
   } catch (error) {
     next(error);
@@ -47,27 +47,27 @@ router.post('/:id/action', requirePermission('calls.write', 'deliveries.write'),
 
     switch (action) {
       case 'CONFIRM':
-        result = await deliveryStatusService.confirmForDelivery(req.params.id, req.user!.sub, observations);
+        result = await deliveryStatusService.confirmForDelivery(routeParam(req.params.id), req.user!.sub, observations);
         break;
       case 'PENDING':
         if (!pendingSubreason) {
           res.status(400).json({ success: false, message: 'Submotivo requerido' });
           return;
         }
-        result = await deliveryStatusService.setPending(req.params.id, req.user!.sub, pendingSubreason, observations);
+        result = await deliveryStatusService.setPending(routeParam(req.params.id), req.user!.sub, pendingSubreason, observations);
         break;
       case 'DEACTIVATE':
         if (!deactivationReason) {
           res.status(400).json({ success: false, message: 'Motivo de baja requerido' });
           return;
         }
-        result = await deliveryStatusService.deactivate(req.params.id, req.user!.sub, deactivationReason, observations);
+        result = await deliveryStatusService.deactivate(routeParam(req.params.id), req.user!.sub, deactivationReason, observations);
         break;
       case 'REACTIVATE':
-        result = await deliveryStatusService.reactivate(req.params.id, req.user!.sub, observations);
+        result = await deliveryStatusService.reactivate(routeParam(req.params.id), req.user!.sub, observations);
         break;
       case 'RESCHEDULE':
-        result = await deliveryStatusService.transition(req.params.id, req.user!.sub, {
+        result = await deliveryStatusService.transition(routeParam(req.params.id), req.user!.sub, {
           toStatus: 'RESCHEDULED',
           action: 'RESCHEDULE',
           observations,

@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
-import { AuthRequest } from '../../../middlewares/auth.middleware';
+import { AuthRequest, routeParam } from '../../../middlewares/auth.middleware';
 import { validate } from '../../../middlewares/validate.middleware';
 import { requirePermission } from '../../../middlewares/role.middleware';
 import { patientService } from '../service/patient.service';
@@ -36,7 +36,7 @@ router.get(
   validate(patientIdSchema),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const patient = await patientService.getById(req.params.id);
+      const patient = await patientService.getById(routeParam(req.params.id));
       res.json({ success: true, data: patient });
     } catch (error) {
       next(error);
@@ -78,7 +78,7 @@ router.get(
   validate(patientIdSchema),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const history = await patientService.getFullHistory(req.params.id);
+      const history = await patientService.getFullHistory(routeParam(req.params.id));
       res.json({ success: true, data: history });
     } catch (error) {
       next(error);

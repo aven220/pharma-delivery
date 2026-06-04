@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const validate_middleware_1 = require("../../../middlewares/validate.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const call_service_1 = require("../service/call.service");
@@ -91,7 +92,7 @@ router.post('/assign', (0, role_middleware_1.requirePermission)('calls.assign', 
 router.patch('/my/:id', (0, role_middleware_1.requirePermission)('calls.write'), (0, validate_middleware_1.validate)(updateAssignmentSchema), async (req, res, next) => {
     try {
         const isAdmin = req.user.role === 'ADMIN';
-        const data = await call_assignment_service_1.callAssignmentService.updateAssignment(req.params.id, req.user.sub, req.body, isAdmin ? { bypassOperatorCheck: true, actingUserId: req.user.sub } : undefined);
+        const data = await call_assignment_service_1.callAssignmentService.updateAssignment((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub, req.body, isAdmin ? { bypassOperatorCheck: true, actingUserId: req.user.sub } : undefined);
         res.json({ success: true, data });
     }
     catch (error) {

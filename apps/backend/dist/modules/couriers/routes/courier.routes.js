@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createCourierRoutes = createCourierRoutes;
 const express_1 = require("express");
+const auth_middleware_1 = require("../../../middlewares/auth.middleware");
 const role_middleware_1 = require("../../../middlewares/role.middleware");
 const courier_panel_service_1 = require("../service/courier-panel.service");
 const courier_route_service_1 = require("../service/courier-route.service");
@@ -25,7 +26,7 @@ function createCourierRoutes(io) {
     });
     router.get('/routes/today/:courierId', (0, role_middleware_1.requirePermission)('couriers.read', 'assignments.write'), async (req, res, next) => {
         try {
-            const data = await courier_route_service_1.courierRouteService.getTodayRoute(req.params.courierId);
+            const data = await courier_route_service_1.courierRouteService.getTodayRoute((0, auth_middleware_1.routeParam)(req.params.courierId));
             res.json({ success: true, data });
         }
         catch (error) {
@@ -39,7 +40,7 @@ function createCourierRoutes(io) {
                 res.status(400).json({ success: false, message: 'targetDate es requerido' });
                 return;
             }
-            const data = await courier_route_service_1.courierRouteService.carryOverPending(req.params.id, targetDate, req.user.sub);
+            const data = await courier_route_service_1.courierRouteService.carryOverPending((0, auth_middleware_1.routeParam)(req.params.id), targetDate, req.user.sub);
             io?.to(`user:${data.previousRoute.courierId}`).emit('route.carry_over', {
                 routeId: data.nextRoute.id,
                 movedCount: data.movedCount,
@@ -55,7 +56,7 @@ function createCourierRoutes(io) {
     router.post('/routes/:id/close', (0, role_middleware_1.requirePermission)('assignments.write', 'couriers.read'), async (req, res, next) => {
         try {
             const { notes } = req.body;
-            const data = await courier_route_service_1.courierRouteService.closeRoute(req.params.id, req.user.sub, notes);
+            const data = await courier_route_service_1.courierRouteService.closeRoute((0, auth_middleware_1.routeParam)(req.params.id), req.user.sub, notes);
             res.json({ success: true, data });
         }
         catch (error) {
@@ -85,7 +86,7 @@ function createCourierRoutes(io) {
     });
     router.get('/:id', (0, role_middleware_1.requirePermission)('couriers.read', 'dashboard.read'), async (req, res, next) => {
         try {
-            const data = await courier_panel_service_1.courierPanelService.getCourierDetail(req.params.id);
+            const data = await courier_panel_service_1.courierPanelService.getCourierDetail((0, auth_middleware_1.routeParam)(req.params.id));
             res.json({ success: true, data });
         }
         catch (error) {
