@@ -27,6 +27,10 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
   EXPO_ACCESS_TOKEN: z.string().optional(),
+  TRUST_PROXY: z
+    .string()
+    .default('true')
+    .transform((v) => v !== 'false' && v !== '0'),
   BACKUP_RETENTION_DAYS: z.coerce.number().default(14),
 });
 

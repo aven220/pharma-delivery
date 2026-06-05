@@ -1,7 +1,11 @@
 /** @type {import('expo/config').ExpoConfig} */
 const appJson = require('./app.json');
 
-const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') || '';
+const apiUrl = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  process.env.MOBILE_API_URL ||
+  ''
+).replace(/\/$/, '');
 
 module.exports = {
   expo: {

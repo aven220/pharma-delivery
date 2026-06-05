@@ -2,7 +2,7 @@
   "expo": {
     "name": "A-AS Delivery",
     "slug": "a-as-delivery",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "pharma-delivery",
@@ -21,7 +21,7 @@
         "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para trazabilidad GPS",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Tracking GPS durante entregas",
         "NSAppTransportSecurity": {
-          "NSAllowsLocalNetworking": true
+          "NSAllowsLocalNetworking": false
         }
       }
     },
@@ -31,7 +31,7 @@
         "backgroundColor": "#2563eb"
       },
       "package": "com.pharma.delivery",
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "permissions": [
         "CAMERA",
         "ACCESS_FINE_LOCATION",
@@ -63,7 +63,8 @@
       ],
       "expo-sqlite",
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      "./plugins/withAndroidNetworkSecurity.js"
     ],
     "experiments": {
       "typedRoutes": true

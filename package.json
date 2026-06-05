@@ -24,9 +24,12 @@
     "docker:prod:down": "bash scripts/docker-prod.sh down",
     "docker:prod:ps": "bash scripts/docker-prod.sh ps",
     "docker:prod:logs": "bash scripts/docker-prod.sh logs -f",
+    "docker:prod:tls": "bash scripts/generate-prod-tls.sh",
+    "verify:prod": "bash scripts/verify-production.sh",
     "backup:run": "bash scripts/docker-prod.sh exec backup /usr/local/bin/pharma-backup.sh",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:apk": "npm run build:apk -w @pharma/mobile-expo"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

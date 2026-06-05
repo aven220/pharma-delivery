@@ -41,7 +41,12 @@ import { createIntermunicipalRouteRoutes } from './modules/intermunicipal-routes
 const app = express();
 const httpServer = createServer(app);
 
+if (env.TRUST_PROXY) {
+  app.set('trust proxy', 1);
+}
+
 const io = new Server(httpServer, {
+  path: '/socket.io/',
   cors: {
     origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
     credentials: true,

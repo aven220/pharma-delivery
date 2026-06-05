@@ -59,13 +59,17 @@ export function connectSocket(): Socket | null {
   }
 
   socket = io(API_URL, {
+    path: '/socket.io/',
+    secure: API_URL.startsWith('https://'),
     auth: (cb) => {
       cb({ token: useAuthStore.getState().accessToken });
     },
     transports: ['polling', 'websocket'],
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: 15,
     reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    timeout: 20000,
   });
 
   socket.on('connect', () => {

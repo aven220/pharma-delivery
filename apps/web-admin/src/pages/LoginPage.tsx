@@ -26,7 +26,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'admin@pharma.local', password: 'Admin123!' },
+    defaultValues: { email: '', password: '' },
   });
 
   const mutation = useMutation({
@@ -40,7 +40,7 @@ export function LoginPage() {
   const loginError = mutation.isError
     ? getApiErrorMessage(
         mutation.error,
-        'No se pudo conectar con el servidor. Verifique que el backend esté activo en el puerto 4000.'
+        'No se pudo conectar con el servidor. Verifique WEB_API_URL y que el servicio esté disponible por HTTPS.'
       )
     : null;
 

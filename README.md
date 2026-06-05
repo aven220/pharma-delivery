@@ -24,7 +24,7 @@ pharma-delivery/
 │   ├── utils/            # Utilidades
 │   ├── api-client/       # Cliente HTTP con refresh token
 │   └── ui/               # Componentes compartidos
-├── infra/nginx/          # Configuración balanceador producción
+├── infra/nginx/          # NGINX interno API + edge HTTPS (443)
 ├── ops/backup/           # Scripts backup / restore PostgreSQL
 ├── docker-compose.yml    # Desarrollo local
 ├── docker-compose.prod.yml
@@ -92,8 +92,9 @@ Ver `apps/backend/.env.example` y `apps/web-admin/.env.example`.
 | `REDIS_URL` | Conexión Redis |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Secretos JWT (≥32 chars) |
 | `CORS_ORIGIN` | Orígenes permitidos (admin web) |
-| `UPLOAD_DIR` | Directorio evidencias (filesystem, no SQLite) |
-| `APP_PUBLIC_URL` | URL admin (enlaces reset contraseña) |
+| `WEB_PUBLIC_URL` | URL HTTPS del panel admin (producción) |
+| `WEB_API_URL` | URL HTTPS del API para build web-admin |
+| `MOBILE_API_URL` | URL HTTPS del API para build móvil (EAS) |
 | `SMTP_*` | Correo recuperación contraseña |
 | `EXPO_ACCESS_TOKEN` | Push notifications Expo |
 | `LOG_LEVEL` / `LOG_DIR` | Nivel y directorio de logs |
@@ -107,7 +108,7 @@ Copie y edite:
 cp .env.production.example .env.production
 ```
 
-Documentación completa en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Documentación completa en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y checklist en [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md).
 
 ---
 
@@ -147,21 +148,21 @@ npm run docker:up
 # Swagger:  http://localhost:4000/api/docs
 ```
 
-### Producción (alta disponibilidad)
+### Producción (HTTPS único)
 
 ```bash
 cp .env.production.example .env.production
-# Editar secretos y URLs
+bash scripts/generate-prod-tls.sh   # o certs Let's Encrypt en infra/ssl/
+bash scripts/docker-prod.sh up -d --build
 
-npm run docker:prod
-# API (NGINX):  http://localhost:8080
-# Admin web:    http://localhost:8081
-# Health:       http://localhost:8080/health
+# API y admin:  https://TU-HOST/
+# Health:       https://TU-HOST/health
+bash scripts/verify-production.sh
 ```
 
-Arquitectura: **2 backends** + **NGINX** + **PostgreSQL** + **Redis** + **backup cron**.
+Solo se publican puertos **80** y **443**. API y admin son internos en Docker.
 
-Detalle completo: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+Detalle: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
@@ -266,8 +267,8 @@ docker compose -f docker-compose.prod.yml logs -f backend-1 nginx
 
 ```bash
 cd apps/mobile-expo
-npm run build:apk       # preview APK
-# EXPO_PUBLIC_API_URL=https://api.tu-dominio.com
+EXPO_PUBLIC_API_URL=https://TU-HOST npm run build:apk
+# MOBILE_API_URL = misma URL HTTPS que WEB_API_URL
 ```
 
 ---

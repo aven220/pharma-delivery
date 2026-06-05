@@ -78,7 +78,7 @@ api.interceptors.response.use(
 export function getApiErrorMessage(err: unknown, fallback = 'Error de conexión'): string {
   if (!isAxiosError(err)) return fallback;
   if (!err.response) {
-    return `No se puede conectar al servidor (${API_URL}). Verifique WiFi y EXPO_PUBLIC_API_URL.`;
+    return 'No se puede conectar al servidor. Verifique red WiFi o datos móviles y que MOBILE_API_URL use HTTPS.';
   }
   if (err.response.status === 429) {
     return 'Demasiadas peticiones al servidor. Espere un momento e intente de nuevo.';

@@ -14,12 +14,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://TU-ID-4000.use.devtunnels.ms"
+        "EXPO_PUBLIC_API_URL": ""
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": ""
       }
     }
   },

@@ -1,36 +1,43 @@
 # Guía de despliegue — A-AS Delivery (Producción)
 
-Esta guía describe el despliegue empresarial con **alta disponibilidad**, balanceador NGINX, backends redundantes, backups automáticos y monitoreo básico.
+Despliegue con **proxy edge HTTPS**, backend único, backups automáticos y Socket.io detrás de NGINX.
 
 ## Arquitectura
 
 ```
-                    ┌─────────────┐
-  Usuarios ────────►│   NGINX     │ :8080 (API + WebSockets)
-                    │  (balanceo) │
-                    └──────┬──────┘
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-       ┌─────────────┐           ┌─────────────┐
-       │  backend-1  │           │  backend-2  │
-       └──────┬──────┘           └──────┬──────┘
-              │                         │
-              └────────────┬────────────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-        PostgreSQL      Redis      uploads (vol.)
-              │
-              ▼
-        backup (cron 02:00)
-
-  Admin web ──► web-admin :8081 (SPA estática)
+                         ┌──────────────────┐
+  Internet ─────────────►│  edge (NGINX)    │ :443 HTTPS, :80 → redirect
+                         │  pharma-edge     │
+                         └────────┬─────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+     /api, /socket.io      /health, /metrics      / (resto)
+              │                                       │
+              ▼                                       ▼
+     ┌────────────────┐                    ┌────────────────┐
+     │ nginx (interno)│                    │  web-admin     │
+     │  sin puerto    │                    │  sin puerto    │
+     │  en el host    │                    │  en el host    │
+     └───────┬────────┘                    └────────────────┘
+             ▼
+     ┌────────────────┐
+     │    backend     │ :4000 (solo red Docker)
+     └───────┬────────┘
+             │
+     ┌───────┴───────┐
+     ▼               ▼
+ PostgreSQL       Redis
+     │
+     ▼
+ backup (cron 02:00)
 ```
 
-- **ip_hash** en NGINX mantiene afinidad de sesión Socket.io entre instancias.
-- **Volúmenes compartidos** (`uploads_data`, `backend_logs`) entre backend-1 y backend-2.
-- **Health checks**: `/live`, `/ready`, `/health`, `/metrics`.
+- **8080** y **8081** ya no se publican en el host; solo **80** y **443** del servicio `edge`.
+- Rutas API: `https://TU-HOST/api/...`
+- WebSocket: `https://TU-HOST/socket.io/`
+- Panel admin: `https://TU-HOST/`
 
 ---
 
@@ -44,14 +51,12 @@ Esta guía describe el despliegue empresarial con **alta disponibilidad**, balan
 | SO | Linux (Ubuntu 22.04+) |
 | Software | Docker 24+, Docker Compose v2 |
 
-Puertos a publicar:
+Puertos en firewall / Azure NSG:
 
-| Puerto | Servicio |
-|--------|----------|
-| 8080 | API (NGINX → backends) |
-| 8081 | Panel web admin |
-
-En producción real, coloque un reverse proxy TLS (Cloudflare, Caddy, Traefik) delante de estos puertos.
+| Puerto | Uso |
+|--------|-----|
+| **443** | HTTPS (API + admin + Socket.io) |
+| **80** | Redirección a HTTPS |
 
 ---
 
@@ -65,135 +70,111 @@ npm install
 
 ---
 
-## Paso 2 — Configurar variables de entorno
+## Paso 2 — Variables de entorno
 
 ```bash
 cp .env.production.example .env.production
+nano .env.production
 ```
-
-Edite `.env.production` y **cambie todos los valores por defecto**:
 
 | Variable | Descripción |
 |----------|-------------|
-| `POSTGRES_PASSWORD` | Clave fuerte para PostgreSQL |
-| `JWT_ACCESS_SECRET` | Secreto JWT acceso (≥32 chars, aleatorio) |
-| `JWT_REFRESH_SECRET` | Secreto JWT refresh (≥32 chars, distinto) |
-| `CORS_ORIGIN` | URL del admin (`https://admin.tu-dominio.com`) |
-| `VITE_API_URL` | URL pública de la API (`https://api.tu-dominio.com`) |
-| `APP_PUBLIC_URL` | URL del admin (enlaces de recuperación de contraseña) |
-| `SMTP_*` | Correo para reset de contraseña |
-| `EXPO_ACCESS_TOKEN` | Token Expo (push móvil, opcional) |
-| `BACKUP_RETENTION_DAYS` | Días de retención de backups (default 14) |
+| `POSTGRES_PASSWORD` | Clave fuerte PostgreSQL |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Secretos JWT (≥32 chars, distintos) |
+| `WEB_PUBLIC_URL` | URL HTTPS del panel admin |
+| `WEB_API_URL` | URL HTTPS del API (mismo host en despliegue por IP) |
+| `MOBILE_API_URL` | Igual que `WEB_API_URL` (build APK) |
+| `CORS_ORIGIN` | Normalmente igual que `WEB_PUBLIC_URL` |
+| `SMTP_*` | Correo recuperación de contraseña |
+| `EXPO_ACCESS_TOKEN` | Push Expo (opcional) |
+| `TRUST_PROXY` | `true` (default) |
 
-Generar secretos:
-
-```bash
-openssl rand -base64 48
-```
+Generar secretos: `openssl rand -base64 48`
 
 ---
 
-## Paso 3 — Levantar stack de producción
+## Paso 3 — Certificados TLS
+
+**Opción A — Autofirmado (pruebas / IP sin dominio):**
 
 ```bash
-npm run docker:prod
-# equivalente:
-# docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+TLS_CN=20.5.19.8 TLS_SAN='IP:20.5.19.8' bash scripts/generate-prod-tls.sh
 ```
 
-Verificar servicios:
+**Opción B — Let's Encrypt (recomendado producción):**
 
-```bash
-docker compose -f docker-compose.prod.yml ps
-curl http://localhost:8080/health
-curl http://localhost:8080/ready
-curl http://localhost:8081
-```
+Copie `fullchain.pem` y `privkey.pem` a `infra/ssl/`.
 
-La primera ejecución aplica migraciones Prisma automáticamente (`prisma migrate deploy`).
+> La app móvil Android confía en certificados del sistema. Con autofirmado, el usuario debe instalar/confiar el certificado o usar dominio con LE.
 
 ---
 
-## Paso 4 — Seed inicial (solo primera vez)
+## Paso 4 — Levantar stack
 
 ```bash
-docker compose -f docker-compose.prod.yml exec backend-1 \
-  npx prisma db seed
+bash scripts/docker-prod.sh up -d --build
 ```
 
-Credenciales por defecto del seed:
+Verificación:
 
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Admin | admin@pharma.local | Admin123! |
-| Domiciliario | driver@pharma.local | Driver123! |
-| Auditor | auditor@pharma.local | Auditor123! |
+```bash
+curl -k https://localhost/health
+curl -k https://localhost/ready
+bash scripts/verify-production.sh
+```
 
-**Cambie estas contraseñas inmediatamente en producción.**
+Migraciones Prisma se aplican al iniciar el backend (`prisma migrate deploy`).
 
 ---
 
-## Paso 5 — TLS y dominio (recomendado)
-
-Ejemplo con Caddy delante del stack:
-
-```
-api.tu-dominio.com {
-  reverse_proxy localhost:8080
-}
-admin.tu-dominio.com {
-  reverse_proxy localhost:8081
-}
-```
-
-Actualice `CORS_ORIGIN`, `VITE_API_URL` y `APP_PUBLIC_URL`, luego reconstruya web-admin:
+## Paso 5 — Seed inicial (solo primera vez)
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build web-admin
+bash scripts/docker-prod.sh exec backend npx prisma db seed
 ```
+
+**Cambie inmediatamente** las contraseñas creadas por el seed. No deje credenciales por defecto en producción.
+
+---
+
+## Paso 6 — Reconstruir admin si cambian URLs
+
+```bash
+bash scripts/docker-prod.sh up -d --build web-admin
+```
+
+`WEB_API_URL` se inyecta en build como `VITE_API_URL`.
+
+---
+
+## App móvil (APK)
+
+Defina la URL HTTPS antes del build (misma que `MOBILE_API_URL`):
+
+```bash
+cd apps/mobile-expo
+EXPO_PUBLIC_API_URL=https://TU-HOST eas build --profile preview --platform android
+```
+
+O en EAS: variable de entorno `EXPO_PUBLIC_API_URL` en el perfil `preview` / `production`.
+
+Checklist completo: [docs/PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
 
 ---
 
 ## Backups automáticos
 
-El contenedor `backup` ejecuta `pharma-backup.sh` **diariamente a las 02:00**.
-
-Los archivos se guardan en el volumen `postgres_backups`:
-
-```
-/backups/pharma_delivery_YYYYMMDD_HHMMSS.sql.gz
-```
-
-Backup manual:
+Contenedor `backup` — cron diario 02:00 → volumen `postgres_backups`.
 
 ```bash
 npm run backup:run
 ```
 
----
-
-## Restauración de backup
+Restauración:
 
 ```bash
-# Listar backups
-docker compose -f docker-compose.prod.yml exec backup ls -lh /backups
-
-# Restaurar (SOBRESCRIBE la BD actual)
-docker compose -f docker-compose.prod.yml exec backup \
-  /usr/local/bin/pharma-restore.sh /backups/pharma_delivery_20250601_020000.sql.gz
-```
-
-> Copie el script `restore.sh` como `pharma-restore.sh` si aún no está en la imagen, o ejecute:
->
-> ```bash
-> docker compose -f docker-compose.prod.yml exec backup sh -c \
->   'gunzip -c /backups/pharma_delivery_XXXXXX.sql.gz | PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U $POSTGRES_USER -d $POSTGRES_DB'
-> ```
-
-Tras restaurar, reinicie backends:
-
-```bash
-docker compose -f docker-compose.prod.yml restart backend-1 backend-2
+bash scripts/docker-prod.sh exec backup ls -lh /backups
+bash scripts/docker-prod.sh restart backend
 ```
 
 ---
@@ -202,79 +183,38 @@ docker compose -f docker-compose.prod.yml restart backend-1 backend-2
 
 | Endpoint | Uso |
 |----------|-----|
-| `GET /live` | Liveness (proceso activo) |
+| `GET /live` | Liveness |
 | `GET /ready` | Readiness (Postgres + Redis) |
 | `GET /health` | Estado agregado |
-| `GET /metrics` | Métricas Prometheus básicas |
-
-Logs centralizados (JSON en producción):
+| `GET /metrics` | Métricas Prometheus |
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f backend-1 backend-2 nginx
-# Archivos en volumen backend_logs → /app/logs dentro de cada backend
+bash scripts/docker-prod.sh logs -f backend edge nginx
 ```
-
-Configure alertas externas (Uptime Kuma, Datadog, etc.) sobre `/health` y `/ready`.
-
----
-
-## Actualizaciones (rolling)
-
-```bash
-git pull
-npm run docker:prod
-```
-
-Docker reconstruye imágenes y reinicia contenedores. Las migraciones se aplican al arrancar cada backend.
-
-Para cero downtime en despliegues frecuentes:
-
-1. Actualice backend-1, espere `/ready`.
-2. Actualice backend-2, espere `/ready`.
-3. NGINX enruta tráfico solo a instancias sanas.
-
----
-
-## App móvil (APK/AAB)
-
-```bash
-cd apps/mobile-expo
-# EXPO_PUBLIC_API_URL debe apuntar a la API pública (https://api.tu-dominio.com)
-npm run build:apk
-```
-
-Configure `EXPO_ACCESS_TOKEN` en `.env.production` para notificaciones push.
 
 ---
 
 ## Solución de problemas
 
-### `curl /ready` devuelve 503
+### Admin no conecta al API
 
-- Verifique Postgres: `docker compose -f docker-compose.prod.yml logs postgres`
-- Verifique Redis: `docker compose -f docker-compose.prod.yml logs redis`
+- Reconstruya `web-admin` con `WEB_API_URL` correcto (HTTPS, sin `:8080`).
+- `CORS_ORIGIN` debe coincidir con `WEB_PUBLIC_URL`.
 
-### Admin no conecta al backend
+### App móvil no conecta
 
-- Confirme `VITE_API_URL` en build time (reconstruir `web-admin`).
-- Verifique `CORS_ORIGIN` incluye la URL del admin.
+- `MOBILE_API_URL` / `EXPO_PUBLIC_API_URL` debe ser **HTTPS** y coincidir con el host del edge.
+- Regenere el APK tras cambiar la URL.
+- Certificado: use Let's Encrypt o certificado confiable en el dispositivo.
 
-### Recuperación de contraseña no envía correo
+### Socket.io desconecta
 
-- Configure `SMTP_*` en `.env.production`.
-- Sin SMTP, el enlace aparece en logs del backend (solo desarrollo).
+- Verifique `curl -k "https://TU-HOST/socket.io/?EIO=4&transport=polling"`.
+- Tras expirar JWT, la app reintenta refresh y reconexión automática.
 
-### Socket.io desconecta al cambiar de backend
+### `edge` no arranca
 
-- NGINX usa `ip_hash`; no cambie a round-robin sin sticky sessions.
-- Verifique que ambos backends comparten el volumen `uploads_data`.
-
-### Backups vacíos o fallidos
-
-```bash
-docker compose -f docker-compose.prod.yml logs backup
-docker compose -f docker-compose.prod.yml exec backup /usr/local/bin/pharma-backup.sh
-```
+- Faltan archivos en `infra/ssl/` → ejecute `scripts/generate-prod-tls.sh`.
 
 ---
 
@@ -283,5 +223,3 @@ docker compose -f docker-compose.prod.yml exec backup /usr/local/bin/pharma-back
 ```bash
 npm run docker:prod:down
 ```
-
-Los volúmenes (`postgres_data`, `uploads_data`, `postgres_backups`) persisten hasta eliminarlos explícitamente.
