@@ -6,7 +6,7 @@ COPY apps/web-admin ./apps/web-admin
 RUN npm ci --workspace=@pharma/web-admin --workspace=@pharma/types --workspace=@pharma/api-client
 RUN npm run build -w @pharma/types && npm run build -w @pharma/api-client
 WORKDIR /app/apps/web-admin
-ARG VITE_API_URL=http://localhost:4000
+ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 

@@ -1,7 +1,8 @@
 import { createApiClient } from '@pharma/api-client';
 import { useAuthStore } from '@/store/auth.store';
+import { API_URL } from '@/config/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+export { API_URL };
 
 export const pharmaClient = createApiClient({
   baseURL: API_URL,

@@ -102,7 +102,7 @@ services:
       context: .
       dockerfile: apps/web-admin/Dockerfile
       args:
-        VITE_API_URL: ${WEB_API_URL:-${VITE_API_URL:?set WEB_API_URL}}
+        VITE_API_URL: ${WEB_API_URL:-${VITE_API_URL:-}}
     container_name: pharma-web-admin-prod
     restart: unless-stopped
     expose:
