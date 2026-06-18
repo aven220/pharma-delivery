@@ -22,7 +22,7 @@ function apiUrlFromEnv() {
 
 function apiHostFromEnv() {
   const url = apiUrlFromEnv();
-  if (!url) return '20.5.19.8';
+  if (!url) return '192.168.20.26';
   try {
     return new URL(url).hostname;
   } catch {

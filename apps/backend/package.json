@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma generate && tsx prisma/seed.ts",
+    "db:diagnose": "node ../../scripts/diagnose-db.mjs",
     "test:integration": "tsx --test src/__tests__/integration.api.test.ts",
     "lint": "eslint src --ext .ts"
   },

@@ -45,6 +45,18 @@ pharma-delivery/
 
 ## Instalación (desarrollo)
 
+### Red local — equipo `192.168.20.26`
+
+Ver guía completa: [docs/SETUP_EQUIPO_LAN.md](docs/SETUP_EQUIPO_LAN.md)
+
+```bash
+npm run setup:lan          # aplica IP a todos los .env
+bash scripts/setup-lan.sh  # setup completo (Mac/Linux)
+# Windows: powershell -File scripts\setup-lan.ps1
+```
+
+### Desarrollo genérico (localhost)
+
 ```bash
 cd pharma-delivery
 npm install
