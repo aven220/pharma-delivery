@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "build:apk": "bash scripts/fetch-server-cert.sh && node scripts/prepare-eas-build.js && eas build --platform android --profile preview",
     "build:apk:lan": "node scripts/prepare-eas-build.js --lan && eas build --platform android --profile preview-lan",
+    "build:apk:lan:local": "node scripts/prepare-eas-build.js --lan && eas build --platform android --profile preview-lan --local",
     "build:apk:local": "bash scripts/fetch-server-cert.sh && node scripts/prepare-eas-build.js && eas build --platform android --profile preview --local",
     "diagnose:connection": "bash scripts/fetch-server-cert.sh && curl -k -s https://20.5.19.8/health && echo '' && curl -k -s -o /dev/null -w 'login HTTP %{http_code}\\n' -X POST https://20.5.19.8/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"x\",\"password\":\"x\"}'"
   },
