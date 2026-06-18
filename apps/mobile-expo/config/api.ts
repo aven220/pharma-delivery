@@ -4,8 +4,9 @@ function normalizeBaseUrl(url: string): string {
   return url.replace(/\/$/, '');
 }
 
-const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
+/** extra.apiUrl se define en app.config.js durante el build EAS (fuente principal en APK). */
 const fromExtra = (Constants.expoConfig?.extra as { apiUrl?: string } | undefined)?.apiUrl?.trim();
+const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim();
 
 function assertProductionUrl(normalized: string): void {
   if (!normalized.startsWith('https://')) {
@@ -26,13 +27,13 @@ function assertProductionUrl(normalized: string): void {
 }
 
 function resolveApiUrl(): string {
-  const url = fromEnv || fromExtra || '';
+  const url = fromExtra || fromEnv || '';
   if (!url) {
     if (__DEV__) {
       return normalizeBaseUrl('http://localhost:4000');
     }
     throw new Error(
-      'MOBILE_API_URL no configurada. Defina EXPO_PUBLIC_API_URL en el build EAS (HTTPS público).'
+      'MOBILE_API_URL no configurada en el APK. Regenere con: EXPO_PUBLIC_API_URL=https://TU-HOST npm run build:apk'
     );
   }
   const normalized = normalizeBaseUrl(url);

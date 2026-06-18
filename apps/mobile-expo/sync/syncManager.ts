@@ -1,4 +1,3 @@
-import * as Network from 'expo-network';
 import {
   getPendingSyncItems,
   markSyncItemCompleted,
@@ -8,7 +7,11 @@ import { replaceCourierDeliveries } from '../database/deliveries.repo';
 import { useAuthStore } from '../store/auth.store';
 import { api, getApiErrorMessage } from '../services/api';
 import { notifyDeliveriesSync } from './syncEvents';
+import { isOnline } from '../utils/network';
 import Constants from 'expo-constants';
+import * as Network from 'expo-network';
+
+export { isOnline };
 
 const DEVICE_ID = Constants.sessionId || 'unknown-device';
 
@@ -21,11 +24,6 @@ let wasOffline = false;
 
 export function getSyncStatus() {
   return { error: lastSyncError, count: lastSyncCount };
-}
-
-export async function isOnline(): Promise<boolean> {
-  const state = await Network.getNetworkStateAsync();
-  return !!(state.isConnected && state.isInternetReachable !== false);
 }
 
 export async function syncOfflineQueue(): Promise<{ synced: number; failed: number }> {
@@ -69,7 +67,7 @@ export async function syncOfflineQueue(): Promise<{ synced: number; failed: numb
 
 export async function fetchAndCacheDeliveries(): Promise<boolean> {
   if (!(await isOnline())) {
-    lastSyncError = 'Sin conexión a internet';
+    lastSyncError = null;
     notifyDeliveriesSync();
     return false;
   }
@@ -93,7 +91,7 @@ export async function fetchAndCacheDeliveries(): Promise<boolean> {
     if (status === 401) {
       await useAuthStore.getState().logout();
     }
-    lastSyncError = getApiErrorMessage(err, 'Error al sincronizar entregas');
+    lastSyncError = getApiErrorMessage(err, 'No se pudo actualizar. Sus datos guardados siguen disponibles.', 'sync');
     notifyDeliveriesSync();
     console.error('Fetch deliveries failed:', err);
     return false;

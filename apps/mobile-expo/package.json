@@ -12,8 +12,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
-    "build:apk": "eas build --platform android --profile preview",
-    "build:apk:local": "eas build --platform android --profile preview --local"
+    "build:apk": "bash scripts/fetch-server-cert.sh && node scripts/prepare-eas-build.js && eas build --platform android --profile preview",
+    "build:apk:local": "bash scripts/fetch-server-cert.sh && node scripts/prepare-eas-build.js && eas build --platform android --profile preview --local",
+    "diagnose:connection": "bash scripts/fetch-server-cert.sh && curl -k -s https://20.5.19.8/health && echo '' && curl -k -s -o /dev/null -w 'login HTTP %{http_code}\\n' -X POST https://20.5.19.8/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"x\",\"password\":\"x\"}'"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",

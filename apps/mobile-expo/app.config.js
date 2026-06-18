@@ -7,6 +7,12 @@ const apiUrl = (
   ''
 ).replace(/\/$/, '');
 
+if (process.env.EAS_BUILD === 'true' && !apiUrl) {
+  throw new Error(
+    'EXPO_PUBLIC_API_URL requerida en EAS Build. Ejecute: npm run build:apk con la URL HTTPS o defínala en eas.json env.'
+  );
+}
+
 module.exports = {
   expo: {
     ...appJson.expo,

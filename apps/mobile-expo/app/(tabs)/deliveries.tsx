@@ -12,7 +12,7 @@ import { getLocalDeliveries, getPendingSyncCount } from '../../database/deliveri
 import { fetchAndCacheDeliveries, getSyncStatus, isOnline, performFullSync } from '../../sync/syncManager';
 import { onDeliveriesSync } from '../../sync/syncEvents';
 import { useAuthStore } from '../../store/auth.store';
-import { API_URL } from '../../config/api';
+import { OFFLINE_WORKING_MSG } from '../../lib/user-messages';
 import { DELIVERY_STATUS_LABELS, PRIORITY_LABELS } from '../../constants/labels';
 import { filterDeliveryDtos, isDeliveryCompleted } from '../../lib/deliveryListUtils';
 import { SearchBar } from '../../components/SearchBar';
@@ -130,15 +130,19 @@ export default function DeliveriesScreen() {
             <Text style={styles.syncOk}>{syncCount} entrega(s) sincronizada(s)</Text>
           )}
           {pendingSync > 0 && (
-            <Text style={styles.syncBadge}>{pendingSync} pendiente(s) de sync</Text>
+            <Text style={styles.syncBadge}>{pendingSync} pendiente(s) de envío</Text>
           )}
         </View>
-        {syncError ? (
+        {!online && (
+          <View style={styles.offlineBox}>
+            <Text style={styles.offlineText}>{OFFLINE_WORKING_MSG}</Text>
+          </View>
+        )}
+        {syncError && online ? (
           <View style={styles.errorBox}>
             <Text style={styles.errorText}>{syncError}</Text>
-            <Text style={styles.errorHint}>Servidor: {API_URL}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={onForceSync}>
-              <Text style={styles.retryText}>Reintentar sincronización</Text>
+              <Text style={styles.retryText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -174,9 +178,10 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 14, color: '#64748b' },
   syncBadge: { fontSize: 12, color: '#f59e0b', fontWeight: '600' },
   syncOk: { fontSize: 12, color: '#16a34a', fontWeight: '600' },
+  offlineBox: { marginTop: 10, padding: 10, backgroundColor: '#fffbeb', borderRadius: 8 },
+  offlineText: { fontSize: 13, color: '#92400e' },
   errorBox: { marginTop: 10, padding: 10, backgroundColor: '#fef2f2', borderRadius: 8 },
   errorText: { fontSize: 13, color: '#dc2626' },
-  errorHint: { fontSize: 11, color: '#64748b', marginTop: 4 },
   retryBtn: { marginTop: 8, padding: 8, backgroundColor: '#2563eb', borderRadius: 6 },
   retryText: { color: '#fff', textAlign: 'center', fontWeight: '600', fontSize: 13 },
   card: { backgroundColor: '#fff', margin: 12, marginBottom: 0, padding: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },

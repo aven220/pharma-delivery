@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/auth.store';
 import { startAutoSync, stopAutoSync, performFullSync } from '../sync/syncManager';
 import { connectSocket, disconnectSocket } from '../sockets/client';
 import { ensureValidSession } from '../services/api';
+import { isOnline } from '../utils/network';
 import { registerPushToken } from '../services/pushRegistration';
 import { getDatabase } from '../database';
 
@@ -29,7 +30,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     (async () => {
       let hasSession = !!accessToken;
-      if (hasSession) {
+      if (hasSession && (await isOnline())) {
         hasSession = await ensureValidSession();
       }
       if (cancelled) return;
@@ -58,12 +59,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const ok = await ensureValidSession();
-      if (cancelled || !ok) return;
+      if (await isOnline()) {
+        const ok = await ensureValidSession();
+        if (cancelled || !ok) return;
+        connectSocket();
+        await registerPushToken().catch(() => {});
+        await performFullSync().catch(() => {});
+      }
       startAutoSync();
-      connectSocket();
-      await registerPushToken().catch(() => {});
-      await performFullSync().catch(() => {});
     })();
 
     return () => {

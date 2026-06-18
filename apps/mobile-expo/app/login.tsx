@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { getApiErrorMessage, login } from '../services/api';
 import { useAuthStore } from '../store/auth.store';
 import { performFullSync } from '../sync/syncManager';
+import { isOnline } from '../utils/network';
+import { OFFLINE_LOGIN_MSG } from '../lib/user-messages';
 import { BrandConfig } from '../constants/labels';
 
 export default function LoginScreen() {
@@ -33,13 +35,17 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
+      if (!(await isOnline())) {
+        setError(OFFLINE_LOGIN_MSG);
+        return;
+      }
       await useAuthStore.getState().logout();
       const result = await login(email.trim(), password);
       await setAuth(result.user, result.tokens);
       await performFullSync();
       router.replace('/(tabs)/deliveries');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'No se pudo iniciar sesión'));
+      setError(getApiErrorMessage(err, 'No se pudo iniciar sesión.', 'login'));
     } finally {
       setLoading(false);
     }

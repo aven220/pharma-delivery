@@ -1,6 +1,9 @@
 import axios, { isAxiosError } from 'axios';
 import { useAuthStore } from '../store/auth.store';
 import { API_URL } from '../config/api';
+import { isOnline } from '../utils/network';
+import { getUserFacingError } from '../lib/user-messages';
+import { logConnectionError } from '../lib/connection-log';
 
 export { API_URL };
 
@@ -25,6 +28,11 @@ export async function ensureValidSession(): Promise<boolean> {
   if (!refreshToken) return !!accessToken;
   if (accessToken && !isTokenExpired(accessToken)) return true;
 
+  // Sin red: conservar sesión local para modo offline
+  if (!(await isOnline())) {
+    return !!(accessToken || refreshToken);
+  }
+
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
@@ -34,7 +42,11 @@ export async function ensureValidSession(): Promise<boolean> {
       });
       await useAuthStore.getState().setTokens(data.data);
       return true;
-    } catch {
+    } catch (err) {
+      // Fallo de red: no cerrar sesión; el usuario sigue en modo offline
+      if (isAxiosError(err) && !err.response) {
+        return !!(useAuthStore.getState().accessToken || useAuthStore.getState().refreshToken);
+      }
       await useAuthStore.getState().logout();
       return false;
     } finally {
@@ -53,7 +65,9 @@ function isAuthPath(url?: string): boolean {
 api.interceptors.request.use(async (config) => {
   if (isAuthPath(config.url)) return config;
 
-  await ensureValidSession();
+  if (await isOnline()) {
+    await ensureValidSession();
+  }
   const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -75,24 +89,22 @@ api.interceptors.response.use(
   }
 );
 
-export function getApiErrorMessage(err: unknown, fallback = 'Error de conexión'): string {
-  if (!isAxiosError(err)) return fallback;
-  if (!err.response) {
-    return 'No se puede conectar al servidor. Verifique red WiFi o datos móviles y que MOBILE_API_URL use HTTPS.';
-  }
-  if (err.response.status === 429) {
-    return 'Demasiadas peticiones al servidor. Espere un momento e intente de nuevo.';
-  }
-  if (err.response.status === 401) {
-    return 'Credenciales inválidas o sesión expirada.';
-  }
-  const body = err.response.data as { error?: string; message?: string } | undefined;
-  return body?.error || body?.message || fallback;
+export function getApiErrorMessage(
+  err: unknown,
+  fallback = 'Ocurrió un error. Intente de nuevo.',
+  context: 'login' | 'sync' | 'general' = 'general'
+): string {
+  return getUserFacingError(err, context) || fallback;
 }
 
 export async function login(email: string, password: string) {
-  const { data } = await authClient.post('/api/auth/login', { email, password });
-  return data.data;
+  try {
+    const { data } = await authClient.post('/api/auth/login', { email, password });
+    return data.data;
+  } catch (err) {
+    logConnectionError('login', err);
+    throw err;
+  }
 }
 
 export async function updateDeliveryStatus(
