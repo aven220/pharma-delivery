@@ -85,10 +85,11 @@ try {
     console.log('\n>>> P1000: Prisma llega a localhost:5432 pero las credenciales NO coinciden.\n');
     console.log('Causa más común en PC nuevo: OTRO PostgreSQL en el puerto 5432');
     console.log('(instalado en Windows), NO el de Docker.\n');
-    console.log('SOLUCIÓN A — Usar puerto 5433 para Docker:');
-    console.log('  1. En docker-compose.yml cambie postgres ports a: "5433:5432"');
-    console.log('  2. En apps/backend/.env:');
-    console.log('     DATABASE_URL=postgresql://pharma:pharma_secret@localhost:5433/pharma_delivery?schema=public');
+    console.log('SOLUCIÓN A — Puerto 5433 (recomendado Windows):');
+    console.log('  powershell -ExecutionPolicy Bypass -File scripts\\fix-db-p1000.ps1');
+    console.log('  O manualmente:');
+    console.log('  1. config/dev-host.env → DEV_DB_PORT=5433');
+    console.log('  2. npm run setup:lan');
     console.log('  3. docker compose down && docker compose up -d postgres redis');
     console.log('  4. npm run db:migrate\n');
     console.log('SOLUCIÓN B — Apagar PostgreSQL de Windows:');

@@ -34,7 +34,7 @@ const cfg = loadHostConfig();
 const HOST = cfg.DEV_HOST || '192.168.20.26';
 const API_PORT = cfg.DEV_API_PORT || '4000';
 const WEB_PORT = cfg.DEV_WEB_PORT || '5173';
-const DB_PORT = cfg.DEV_DB_PORT || '5432';
+const DB_PORT = cfg.DEV_DB_PORT || cfg.POSTGRES_HOST_PORT || '5433';
 
 const API_URL = `http://${HOST}:${API_PORT}`;
 const WEB_URL = `http://${HOST}:${WEB_PORT}`;
@@ -44,6 +44,13 @@ console.log(`\nAplicando configuración LAN: ${HOST}\n`);
 console.log(`  API:  ${API_URL}`);
 console.log(`  Web:  ${WEB_URL}`);
 console.log(`  DB:   localhost:${DB_PORT}\n`);
+
+writeIfMissing(
+  join(root, '.env'),
+  `# Docker Compose — puerto PostgreSQL en el host (5433 evita conflicto Windows)
+POSTGRES_HOST_PORT=${DB_PORT}
+`
+);
 
 writeIfMissing(
   join(root, 'apps/backend/.env'),
