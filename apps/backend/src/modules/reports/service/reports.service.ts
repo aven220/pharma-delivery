@@ -42,6 +42,11 @@ export const REPORT_TYPES = [
   'couriers-effectiveness',
   'incidents-general',
   'delivery-status-log',
+  'pending-prep-libre',
+  'pending-prep-empacado',
+  'pending-prep-rechazado',
+  'pending-prep-dispensacion',
+  'pending-prep-movements',
   'excel-imports',
   'medications-catalog',
 ] as const;
@@ -153,7 +158,7 @@ export class ReportsService {
         return this.fetchPatientsPendingCalls();
       case 'deliveries-pending-calls':
         return this.fetchDeliveriesByStatuses(
-          ['PENDING_CALL', 'CALL_COMPLETED', 'RESCHEDULED', 'PENDING', 'SCHEDULED'],
+          ['EMPACADO', 'PENDING_CALL', 'CALL_COMPLETED', 'RESCHEDULED', 'PENDING', 'SCHEDULED'],
           dateFilter,
           'createdAt',
           filters
@@ -204,6 +209,16 @@ export class ReportsService {
         return this.fetchIncidentsGeneral(dateFilter, filters);
       case 'delivery-status-log':
         return this.fetchDeliveryStatusLog(dateFilter, filters);
+      case 'pending-prep-libre':
+        return this.fetchDeliveriesByStatuses(['LIBRE'], dateFilter, 'createdAt', filters);
+      case 'pending-prep-empacado':
+        return this.fetchDeliveriesByStatuses(['EMPACADO'], dateFilter, 'updatedAt', filters);
+      case 'pending-prep-rechazado':
+        return this.fetchDeliveriesByStatuses(['RECHAZADO'], dateFilter, 'updatedAt', filters);
+      case 'pending-prep-dispensacion':
+        return this.fetchPendingPrepByDispensacion();
+      case 'pending-prep-movements':
+        return this.fetchPendingPrepMovements(dateFilter);
       case 'excel-imports':
         return this.fetchExcelImports(dateFilter);
       case 'medications-catalog':
@@ -392,12 +407,15 @@ export class ReportsService {
       estado: label(DELIVERY_STATUS_LABELS, d.status),
       codigoEstado: d.status,
       prioridad: label(PRIORITY_LABELS, d.priority),
-      paciente: `${d.patient.firstName} ${d.patient.lastName}`,
+      paciente: d.patient.lastName === '.' ? d.patient.firstName : `${d.patient.firstName} ${d.patient.lastName}`.trim(),
       documentoPaciente: d.patient.documentId,
       telefono: d.patient.phone,
+      telefono2: d.patient.phoneAlt,
+      telefono3: d.patient.phoneFamily,
       direccion: d.patient.address,
       municipio: d.municipality?.name || '',
       medicamentos: medications,
+      fechaPendiente: fmtDateOnly(d.pendingGeneratedAt),
       fechaProgramada: fmtDateOnly(d.scheduledDate),
       horaProgramada: d.scheduledTime,
       fechaEntrega: fmtDate(d.deliveredAt),
@@ -846,6 +864,63 @@ export class ReportsService {
         };
       })
     );
+  }
+
+  private async fetchPendingPrepByDispensacion() {
+    const rows = await prisma.delivery.groupBy({
+      by: ['documentNumber', 'status'],
+      where: { deletedAt: null, status: { in: ['LIBRE', 'EMPACADO', 'RECHAZADO'] } },
+      _count: { _all: true },
+    });
+
+    const map = new Map<string, { dispensacion: string; libre: number; empacado: number; rechazado: number; total: number }>();
+    for (const row of rows) {
+      const key = row.documentNumber || 'Sin dispensación';
+      const entry = map.get(key) || { dispensacion: key, libre: 0, empacado: 0, rechazado: 0, total: 0 };
+      const count = row._count._all;
+      entry.total += count;
+      if (row.status === 'LIBRE') entry.libre += count;
+      if (row.status === 'EMPACADO') entry.empacado += count;
+      if (row.status === 'RECHAZADO') entry.rechazado += count;
+      map.set(key, entry);
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }
+
+  private async fetchPendingPrepMovements(dateFilter: { gte?: Date; lte?: Date } | undefined) {
+    const rows = await prisma.deliveryStatusLog.findMany({
+      where: {
+        action: { in: ['IMPORT_CREATED', 'PACK_COMPLETED', 'PACK_REJECTED', 'PACK_REOPENED', 'ASSIGNED_TO_CALL'] },
+        ...(dateFilter && { createdAt: dateFilter }),
+      },
+      include: {
+        delivery: {
+          select: {
+            deliveryNumber: true,
+            documentNumber: true,
+            patient: { select: { documentId: true, firstName: true, lastName: true } },
+          },
+        },
+        changedBy: { select: { firstName: true, lastName: true, email: true, role: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return rows.map((log) => ({
+      fecha: fmtDate(log.createdAt),
+      entrega: log.delivery.deliveryNumber,
+      dispensacion: log.delivery.documentNumber,
+      cedula: log.delivery.patient.documentId,
+      paciente: `${log.delivery.patient.firstName} ${log.delivery.patient.lastName}`.trim(),
+      estadoAnterior: log.fromStatus ? label(DELIVERY_STATUS_LABELS, log.fromStatus) : '—',
+      estadoNuevo: label(DELIVERY_STATUS_LABELS, log.toStatus),
+      accion: log.action,
+      observaciones: log.observations,
+      usuario: `${log.changedBy.firstName} ${log.changedBy.lastName}`,
+      email: log.changedBy.email,
+      rol: log.changedBy.role.name,
+    }));
   }
 
   private async fetchDeliveryStatusLog(

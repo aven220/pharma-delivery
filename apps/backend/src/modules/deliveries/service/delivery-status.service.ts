@@ -132,12 +132,13 @@ export class DeliveryStatusService {
       where: { id: deliveryId, deletedAt: null },
     });
     if (!delivery) throw new NotFoundError('Delivery');
-    if (delivery.status !== 'CANCELLED') {
-      throw new ValidationError('Solo se pueden reactivar entregas dadas de baja');
+    if (!['CANCELLED', 'RECHAZADO'].includes(delivery.status)) {
+      throw new ValidationError('Solo se pueden reactivar entregas dadas de baja o rechazadas');
     }
+    const toStatus = delivery.status === 'RECHAZADO' ? 'LIBRE' : 'PENDING_CALL';
     return this.transition(deliveryId, userId, {
-      toStatus: 'PENDING_CALL',
-      action: 'REACTIVATE',
+      toStatus,
+      action: delivery.status === 'RECHAZADO' ? 'PACK_REOPENED' : 'REACTIVATE',
       observations,
     });
   }

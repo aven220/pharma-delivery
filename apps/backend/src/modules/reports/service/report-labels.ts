@@ -1,4 +1,7 @@
 export const DELIVERY_STATUS_LABELS: Record<string, string> = {
+  LIBRE: 'Libre',
+  EMPACADO: 'Empacado',
+  RECHAZADO: 'Rechazado',
   PENDING_CALL: 'Pendiente llamada',
   CALL_COMPLETED: 'Llamada realizada',
   CONFIRMED_FOR_DELIVERY: 'Confirmado para entrega',

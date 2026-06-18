@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { excelApi, excelApiExtended, medicationsApi } from '@/services/api';
@@ -9,7 +9,7 @@ import { PermissionGate } from '@/components/PermissionGate';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/store/toast.store';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 
 const TABS = [
   {
@@ -27,9 +27,23 @@ const TABS = [
 
 type ImportTabId = (typeof TABS)[number]['id'];
 
+async function downloadDeliveriesTemplate() {
+  const res = await excelApi.downloadTemplate();
+  const blob = new Blob([res.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'plantilla-entregas-pendientes.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function DeliveriesImportTab() {
   const fileRef = useRef<HTMLInputElement>(null);
   const { hasPermission } = usePermissions();
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   const { data, refetch, isLoading } = useQuery({
     queryKey: ['excel-imports'],
@@ -73,6 +87,18 @@ function DeliveriesImportTab() {
     if (file) uploadMutation.mutate(file);
   };
 
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      await downloadDeliveriesTemplate();
+      toast.success('Plantilla descargada');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'No se pudo descargar la plantilla'));
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PermissionGate permissions={['excel.import']}>
@@ -82,10 +108,21 @@ function DeliveriesImportTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Suba el archivo Excel con la base de entregas pendientes para llamadas y gestión.
-              Columnas: Cedula, NroDocumento, Nombre, Apellido, Telefono, Direccion, CodigoMedicamento,
-              Medicamento, Cantidad, Lote, Prioridad, FechaEntrega, HoraEntrega
+              Columnas: Cedula, NroDispensacion, Nombre (completo), Telefono, Telefono2, Telefono3,
+              Direccion, CodigoMedicamento, Medicamento, Cantidad, Prioridad, FechaPendiente.
+              Sin lote ni hora de entrega. Filas en cualquier orden — el sistema agrupa por cédula + dispensación.
             </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDownloadTemplate}
+                disabled={downloadingTemplate}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {downloadingTemplate ? 'Descargando...' : 'Descargar plantilla Excel'}
+              </Button>
+            </div>
             <input ref={fileRef} type="file" accept=".xlsx,.xls" className="block" />
             <Button onClick={handleUpload} disabled={uploadMutation.isPending}>
               {uploadMutation.isPending ? 'Subiendo...' : 'Importar entregas'}

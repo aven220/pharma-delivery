@@ -14,7 +14,7 @@ export class DashboardService {
     const monthAgo = new Date(today);
     monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-    const pendingCallStatuses = ['PENDING_CALL', 'PENDING', 'CALL_COMPLETED', 'RESCHEDULED'] as const;
+    const pendingCallStatuses = ['EMPACADO', 'PENDING_CALL', 'PENDING', 'CALL_COMPLETED', 'RESCHEDULED'] as const;
 
     const [
       pendingCall,

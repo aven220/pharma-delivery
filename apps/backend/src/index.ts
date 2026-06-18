@@ -20,6 +20,7 @@ import healthRoutes from './modules/health/health.routes';
 
 import authRoutes from './modules/auth/routes/auth.routes';
 import { createDeliveryRoutes } from './modules/deliveries/routes/delivery.routes';
+import pendingPrepRoutes from './modules/pending-prep/routes/pending-prep.routes';
 import excelImportRoutes from './modules/excel-imports/routes/excel-import.routes';
 import { createAssignmentRoutes } from './modules/assignments/routes/assignment.routes';
 import callRoutes from './modules/calls/routes/call.routes';
@@ -90,6 +91,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/deliveries', createDeliveryRoutes(io));
 app.use('/api/delivery-status', authMiddleware, deliveryStatusRoutes);
 app.use('/api/excel-imports', excelImportRoutes);
+app.use('/api/pending-prep', authMiddleware, pendingPrepRoutes);
 app.use('/api/assignments', authMiddleware, createAssignmentRoutes(io));
 app.use('/api/calls', authMiddleware, callRoutes);
 app.use('/api/incidents', authMiddleware, createIncidentRoutes(io));

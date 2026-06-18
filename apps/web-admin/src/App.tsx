@@ -27,6 +27,7 @@ import { CreatePatientPage } from '@/pages/CreatePatientPage';
 import { DeliveryDetailPage } from '@/pages/DeliveryDetailPage';
 import { CreateDeliveryPage } from '@/pages/CreateDeliveryPage';
 import { PrepareTodayPage } from '@/pages/PrepareTodayPage';
+import { PendingPrepPage } from '@/pages/PendingPrepPage';
 import { HomePage } from '@/pages/HomePage';
 import { ToastContainer } from '@/components/ui/toast';
 
@@ -60,6 +61,11 @@ export default function App() {
             <Route path="prepare-today" element={
               <ProtectedPermissionRoute permissions={['deliveries.read', 'couriers.read', 'intermunicipal_routes.read']}>
                 <PrepareTodayPage />
+              </ProtectedPermissionRoute>
+            } />
+            <Route path="pending-prep" element={
+              <ProtectedPermissionRoute permissions={['deliveries.read', 'deliveries.write']}>
+                <PendingPrepPage />
               </ProtectedPermissionRoute>
             } />
             <Route path="users" element={

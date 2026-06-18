@@ -21,6 +21,9 @@ enum UserStatus {
 }
 
 enum DeliveryStatus {
+  LIBRE
+  EMPACADO
+  RECHAZADO
   PENDING_CALL
   CALL_COMPLETED
   CONFIRMED_FOR_DELIVERY
@@ -417,6 +420,7 @@ model Delivery {
   patientId       String           @map("patient_id")
   status          DeliveryStatus   @default(PENDING_CALL)
   priority        DeliveryPriority @default(MEDIUM)
+  pendingGeneratedAt DateTime?     @map("pending_generated_at")
   scheduledDate   DateTime?        @map("scheduled_date")
   scheduledTime   String?          @map("scheduled_time")
   deliveredAt     DateTime?        @map("delivered_at")

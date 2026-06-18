@@ -43,6 +43,10 @@ export const excelApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  downloadTemplate: () =>
+    api.get('/api/excel-imports/template', {
+      responseType: 'blob',
+    }),
   list: () => api.get('/api/excel-imports'),
 };
 
@@ -169,6 +173,23 @@ export const excelApiExtended = {
   ...excelApi,
   delete: (id: string) => api.delete(`/api/excel-imports/${id}`),
   reprocess: (id: string) => api.post(`/api/excel-imports/${id}/reprocess`),
+};
+
+export const pendingPrepApi = {
+  list: (params?: Record<string, unknown>) => api.get('/api/pending-prep', { params }),
+  summary: () => api.get('/api/pending-prep/summary'),
+  pack: (
+    id: string,
+    data: {
+      observations?: string;
+      items?: Array<{ itemId: string; lotNumber?: string }>;
+      patientUpdates?: Record<string, string>;
+    }
+  ) => api.post(`/api/pending-prep/${id}/pack`, data),
+  reject: (id: string, observations: string) =>
+    api.post(`/api/pending-prep/${id}/reject`, { observations }),
+  reopen: (id: string, observations?: string) =>
+    api.post(`/api/pending-prep/${id}/reopen`, { observations }),
 };
 
 export const authApi = {

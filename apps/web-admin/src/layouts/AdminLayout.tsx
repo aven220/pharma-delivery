@@ -37,6 +37,7 @@ export function AdminLayout() {
 
   const navItems: NavItem[] = [
     { to: '/', icon: LayoutDashboard, label: 'Inicio', show: hasPermission('dashboard.read', 'audit.read') },
+    { to: '/pending-prep', icon: Package, label: 'Preparar pendientes', show: hasPermission('deliveries.read', 'deliveries.write') },
     { to: '/prepare-today', icon: PackageCheck, label: 'Preparar hoy', show: hasPermission('deliveries.read', 'couriers.read', 'intermunicipal_routes.read') },
     { to: '/users', icon: Users, label: 'Usuarios', show: isAdmin() },
     { to: '/deliveries', icon: Package, label: 'Entregas', show: hasPermission('deliveries.read', 'audit.read') },

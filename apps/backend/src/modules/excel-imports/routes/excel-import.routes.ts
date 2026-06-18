@@ -15,6 +15,12 @@ router.post(
 );
 
 router.get(
+  '/template',
+  requirePermission('excel.import', 'excel.read'),
+  excelImportController.downloadTemplate.bind(excelImportController)
+);
+
+router.get(
   '/',
   requirePermission('excel.read', 'excel.import'),
   excelImportController.list.bind(excelImportController)

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/textarea';
 import { Search } from 'lucide-react';
-import { DELIVERY_STATUS_LABELS } from '@/constants/labels';
+import { DELIVERY_STATUS_LABELS, formatPatientName } from '@/constants/labels';
 import { toast } from '@/store/toast.store';
 import { getApiErrorMessage } from '@/lib/api-error';
 
@@ -48,8 +48,7 @@ export function PendingCallsPage({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h2 className="text-3xl font-bold">Llamadas Pendientes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cada fila es una entrega u orden (NroDocumento). Un mismo paciente puede tener varias entregas
-            activas; se gestionan de forma independiente.
+            Solo entregas <strong>empacadas</strong> pueden asignarse. Cada fila es una dispensación (NroDispensacion).
           </p>
         </div>
       )}
@@ -122,7 +121,7 @@ export function PendingCallsPage({ embedded = false }: { embedded?: boolean }) {
                     {item.documentNumber ? ` · Doc. ${item.documentNumber}` : ''}
                   </div>
                   <div className="font-medium text-foreground/90">
-                    {item.patient.firstName} {item.patient.lastName}
+                    {formatPatientName(item.patient)}
                   </div>
                   <div className="text-muted-foreground">
                     Cédula {item.patient.documentType} {item.patient.documentId} · {item.patient.address}

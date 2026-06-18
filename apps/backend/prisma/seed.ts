@@ -47,6 +47,7 @@ const roles = [
       'couriers.read',
       'excel.import', 'excel.read', 'excel.delete', 'excel.reprocess',
       'dashboard.read', 'calls.read', 'calls.write', 'calls.assign',
+      'reports.export',
       'intermunicipal_routes.read', 'intermunicipal_routes.write',
       'intermunicipal_routes.add_deliveries',
     ],
@@ -56,6 +57,7 @@ const roles = [
     description: 'Operador de call center',
     permissions: [
       'deliveries.read',
+      'deliveries.write',
       'assignments.write',
       'couriers.read',
       'calls.read',

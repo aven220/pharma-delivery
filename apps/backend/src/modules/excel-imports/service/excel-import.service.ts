@@ -6,6 +6,7 @@ import { env } from '../../../config/env';
 import { generateHash, generateDeliveryNumber, chunkArray, sanitizePhone } from '@pharma/utils';
 import { logger } from '../../../config/logger';
 import { ValidationError, NotFoundError } from '../../../shared/errors/AppError';
+import { deliveryStatusService } from '../../deliveries/service/delivery-status.service';
 import { DeliveryPriority, Prisma } from '@prisma/client';
 
 interface ExcelRow {
@@ -13,12 +14,22 @@ interface ExcelRow {
   cedula?: string;
   NroDocumento?: string;
   nroDocumento?: string;
+  NroDispensacion?: string;
+  nroDispensacion?: string;
+  Dispensacion?: string;
+  dispensacion?: string;
   Nombre?: string;
   nombre?: string;
   Apellido?: string;
   apellido?: string;
   Telefono?: string;
   telefono?: string;
+  Telefono2?: string;
+  telefono2?: string;
+  Telefono3?: string;
+  telefono3?: string;
+  TelefonoAlt?: string;
+  telefonoAlt?: string;
   Direccion?: string;
   direccion?: string;
   Ciudad?: string;
@@ -27,18 +38,18 @@ interface ExcelRow {
   barrio?: string;
   CodigoMedicamento?: string;
   codigoMedicamento?: string;
+  CUM?: string;
+  cum?: string;
   Medicamento?: string;
   medicamento?: string;
   Cantidad?: number | string;
   cantidad?: number | string;
-  Lote?: string;
-  lote?: string;
   Prioridad?: string;
   prioridad?: string;
+  FechaPendiente?: string | number;
+  fechaPendiente?: string | number;
   FechaEntrega?: string | number;
   fechaEntrega?: string | number;
-  HoraEntrega?: string;
-  horaEntrega?: string;
   Observaciones?: string;
   observaciones?: string;
 }
@@ -49,18 +60,19 @@ interface GroupedDelivery {
   firstName: string;
   lastName: string;
   phone: string;
+  phoneAlt?: string;
+  phoneFamily?: string;
+  phoneAlternative?: string;
   address: string;
   city?: string;
   neighborhood?: string;
   priority: DeliveryPriority;
-  scheduledDate?: Date;
-  scheduledTime?: string;
+  pendingGeneratedAt?: Date;
   observations?: string;
   items: Array<{
     medicationCode: string;
     medicationName: string;
     quantity: number;
-    lotNumber?: string;
     rowHash: string;
   }>;
   groupHash: string;
@@ -74,6 +86,78 @@ function getCell(row: ExcelRow, ...keys: (keyof ExcelRow)[]): string {
     }
   }
   return '';
+}
+
+function getDispensacionNumber(row: ExcelRow): string {
+  return getCell(
+    row,
+    'NroDispensacion',
+    'nroDispensacion',
+    'Dispensacion',
+    'dispensacion',
+    'NroDocumento',
+    'nroDocumento'
+  );
+}
+
+function parsePatientName(row: ExcelRow): { firstName: string; lastName: string } {
+  const fullName = getCell(row, 'Nombre', 'nombre');
+  const legacyLast = getCell(row, 'Apellido', 'apellido');
+  if (legacyLast && !fullName.includes(' ')) {
+    return { firstName: fullName || legacyLast, lastName: legacyLast };
+  }
+  if (!fullName) return { firstName: 'Sin nombre', lastName: '.' };
+  return { firstName: fullName, lastName: '.' };
+}
+
+function parsePhones(row: ExcelRow): {
+  phone: string;
+  phoneAlt?: string;
+  phoneFamily?: string;
+  phoneAlternative?: string;
+} {
+  const rawMain = getCell(row, 'Telefono', 'telefono');
+  const splitFromMain = rawMain
+    .split(/[/;,|]/)
+    .map((p) => sanitizePhone(p.trim()))
+    .filter(Boolean);
+
+  const phone = splitFromMain[0] || sanitizePhone(rawMain) || '';
+  const col2 = sanitizePhone(getCell(row, 'Telefono2', 'telefono2', 'TelefonoAlt', 'telefonoAlt'));
+  const col3 = sanitizePhone(getCell(row, 'Telefono3', 'telefono3'));
+
+  return {
+    phone,
+    phoneAlt: splitFromMain[1] || col2 || undefined,
+    phoneFamily: splitFromMain[2] || col3 || undefined,
+    phoneAlternative: splitFromMain[3] || undefined,
+  };
+}
+
+function parsePendingGeneratedDate(row: ExcelRow): Date | undefined {
+  return parseExcelDate(
+    row.FechaPendiente ?? row.fechaPendiente ?? row.FechaEntrega ?? row.fechaEntrega
+  );
+}
+
+function sortImportRows(rows: ExcelRow[]): ExcelRow[] {
+  return [...rows].sort((a, b) => {
+    const cedulaA = getCell(a, 'Cedula', 'cedula');
+    const cedulaB = getCell(b, 'Cedula', 'cedula');
+    if (cedulaA !== cedulaB) return cedulaA.localeCompare(cedulaB, 'es', { numeric: true });
+
+    const docA = getDispensacionNumber(a) || 'NONE';
+    const docB = getDispensacionNumber(b) || 'NONE';
+    if (docA !== docB) return docA.localeCompare(docB, 'es', { numeric: true });
+
+    const medA =
+      getCell(a, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum') ||
+      getCell(a, 'Medicamento', 'medicamento');
+    const medB =
+      getCell(b, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum') ||
+      getCell(b, 'Medicamento', 'medicamento');
+    return medA.localeCompare(medB, 'es', { numeric: true });
+  });
 }
 
 function parsePriority(value: string): DeliveryPriority {
@@ -100,7 +184,112 @@ function parseExcelDate(value: string | number | undefined): Date | undefined {
   return isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function buildPatientCreateData(group: GroupedDelivery) {
+  return {
+    documentId: group.documentId,
+    documentType: 'CC',
+    firstName: group.firstName,
+    lastName: group.lastName,
+    phone: group.phone || null,
+    phoneAlt: group.phoneAlt || null,
+    phoneFamily: group.phoneFamily || null,
+    phoneAlternative: group.phoneAlternative || null,
+    address: group.address,
+    city: group.city,
+    neighborhood: group.neighborhood,
+    uniqueHash: generateHash(group.documentId, 'CC'),
+  };
+}
+
+function buildPatientUpdateIfEmpty(
+  patient: {
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    phoneAlt: string | null;
+    phoneFamily: string | null;
+    phoneAlternative: string | null;
+    address: string;
+    city: string | null;
+    neighborhood: string | null;
+  },
+  group: GroupedDelivery
+): Prisma.PatientUpdateInput {
+  const data: Prisma.PatientUpdateInput = {};
+
+  if (
+    (patient.lastName === '.' || patient.firstName === 'Sin nombre') &&
+    group.firstName !== 'Sin nombre'
+  ) {
+    data.firstName = group.firstName;
+    data.lastName = group.lastName;
+  }
+  if (!patient.phone && group.phone) data.phone = group.phone;
+  if (!patient.phoneAlt && group.phoneAlt) data.phoneAlt = group.phoneAlt;
+  if (!patient.phoneFamily && group.phoneFamily) data.phoneFamily = group.phoneFamily;
+  if (!patient.phoneAlternative && group.phoneAlternative) {
+    data.phoneAlternative = group.phoneAlternative;
+  }
+  if ((!patient.address || patient.address === 'Sin dirección') && group.address) {
+    data.address = group.address;
+  }
+  if (!patient.city && group.city) data.city = group.city;
+  if (!patient.neighborhood && group.neighborhood) data.neighborhood = group.neighborhood;
+
+  return data;
+}
+
+export const DELIVERY_IMPORT_COLUMNS = [
+  'Cedula',
+  'NroDispensacion',
+  'Nombre',
+  'Telefono',
+  'Telefono2',
+  'Telefono3',
+  'Direccion',
+  'CodigoMedicamento',
+  'Medicamento',
+  'Cantidad',
+  'Prioridad',
+  'FechaPendiente',
+] as const;
+
+const DELIVERY_TEMPLATE_EXAMPLE = {
+  Cedula: '1234567890',
+  NroDispensacion: 'DISP-001234',
+  Nombre: 'Juan Carlos Pérez García',
+  Telefono: '3001234567',
+  Telefono2: '3109876543',
+  Telefono3: '',
+  Direccion: 'Calle 10 #20-30 Barrio Centro',
+  CodigoMedicamento: 'CUM123456',
+  Medicamento: 'Acetaminofén 500 mg',
+  Cantidad: 2,
+  Prioridad: 'MEDIA',
+  FechaPendiente: '2026-06-08',
+};
+
 export class ExcelImportService {
+  generateTemplateBuffer(): Buffer {
+    const ws = XLSX.utils.json_to_sheet([DELIVERY_TEMPLATE_EXAMPLE], {
+      header: [...DELIVERY_IMPORT_COLUMNS],
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Entregas pendientes');
+
+    const instructions = XLSX.utils.aoa_to_sheet([
+      ['Instrucciones'],
+      ['Nombre', 'Nombre completo del paciente (un solo campo)'],
+      ['Telefono / Telefono2 / Telefono3', 'Hasta 3 teléfonos. También puede separar con / en Telefono'],
+      ['FechaPendiente', 'Fecha en que se generó el pendiente (no la entrega)'],
+      ['Lote', 'No incluir — se registra al empacar en Preparar pendientes'],
+      ['HoraEntrega', 'No incluir — se define en llamadas / gestión'],
+    ]);
+    XLSX.utils.book_append_sheet(wb, instructions, 'Instrucciones');
+
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  }
+
   async processImport(importId: string): Promise<void> {
     const importRecord = await prisma.excelImport.findUnique({ where: { id: importId } });
     if (!importRecord) throw new NotFoundError('Excel import');
@@ -115,16 +304,18 @@ export class ExcelImportService {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet);
+    const sortedRows = sortImportRows(rows);
 
     const errors: Array<{ row: number; error: string }> = [];
     const grouped = new Map<string, GroupedDelivery>();
 
-    rows.forEach((row, index) => {
+    sortedRows.forEach((row, index) => {
       const rowNum = index + 2;
       try {
         const documentId = getCell(row, 'Cedula', 'cedula');
-        const documentNumber = getCell(row, 'NroDocumento', 'nroDocumento');
-        const medicationCode = getCell(row, 'CodigoMedicamento', 'codigoMedicamento');
+        const documentNumber = getDispensacionNumber(row);
+        const medicationCode =
+          getCell(row, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum');
         const medicationName = getCell(row, 'Medicamento', 'medicamento');
 
         if (!documentId) throw new ValidationError('Cedula is required');
@@ -133,43 +324,45 @@ export class ExcelImportService {
         }
 
         const groupKey = generateHash(documentId, documentNumber || 'NONE');
-        const rowHash = generateHash(
-          documentId,
-          documentNumber,
-          medicationCode || medicationName,
-          getCell(row, 'Lote', 'lote'),
-          String(getCell(row, 'Cantidad', 'cantidad') || '1')
-        );
+        const medKey = medicationCode || generateHash(medicationName).slice(0, 8).toUpperCase();
+        const rowHash = generateHash(documentId, documentNumber || 'NONE', medKey);
 
         const quantityRaw = getCell(row, 'Cantidad', 'cantidad') || '1';
         const quantity = Math.max(1, parseInt(String(quantityRaw), 10) || 1);
 
         const item = {
-          medicationCode: medicationCode || generateHash(medicationName).slice(0, 8).toUpperCase(),
+          medicationCode: medKey,
           medicationName: medicationName || medicationCode,
           quantity,
-          lotNumber: getCell(row, 'Lote', 'lote') || undefined,
           rowHash,
         };
+
+        const { firstName, lastName } = parsePatientName(row);
+        const phones = parsePhones(row);
 
         if (grouped.has(groupKey)) {
           const existing = grouped.get(groupKey)!;
           const dupItem = existing.items.find((i) => i.rowHash === rowHash);
-          if (!dupItem) existing.items.push(item);
+          if (dupItem) {
+            dupItem.quantity += quantity;
+          } else {
+            existing.items.push(item);
+          }
         } else {
-          const nameParts = getCell(row, 'Nombre', 'nombre').split(' ');
           grouped.set(groupKey, {
             documentId,
             documentNumber,
-            firstName: getCell(row, 'Nombre', 'nombre') || nameParts[0] || 'N/A',
-            lastName: getCell(row, 'Apellido', 'apellido') || nameParts.slice(1).join(' ') || 'N/A',
-            phone: sanitizePhone(getCell(row, 'Telefono', 'telefono')),
+            firstName,
+            lastName,
+            phone: phones.phone,
+            phoneAlt: phones.phoneAlt,
+            phoneFamily: phones.phoneFamily,
+            phoneAlternative: phones.phoneAlternative,
             address: getCell(row, 'Direccion', 'direccion') || 'Sin dirección',
             city: getCell(row, 'Ciudad', 'ciudad') || undefined,
             neighborhood: getCell(row, 'Barrio', 'barrio') || undefined,
             priority: parsePriority(getCell(row, 'Prioridad', 'prioridad') || 'MEDIA'),
-            scheduledDate: parseExcelDate(row.FechaEntrega ?? row.fechaEntrega),
-            scheduledTime: getCell(row, 'HoraEntrega', 'horaEntrega') || undefined,
+            pendingGeneratedAt: parsePendingGeneratedDate(row),
             observations: getCell(row, 'Observaciones', 'observaciones') || undefined,
             items: [item],
             groupHash: groupKey,
@@ -196,30 +389,16 @@ export class ExcelImportService {
           });
 
           if (patient) {
-            patient = await tx.patient.update({
-              where: { id: patient.id },
-              data: {
-                firstName: group.firstName,
-                lastName: group.lastName,
-                phone: group.phone || patient.phone,
-                address: group.address,
-                city: group.city,
-                neighborhood: group.neighborhood,
-              },
-            });
+            const updateData = buildPatientUpdateIfEmpty(patient, group);
+            if (Object.keys(updateData).length > 0) {
+              patient = await tx.patient.update({
+                where: { id: patient.id },
+                data: updateData,
+              });
+            }
           } else {
             patient = await tx.patient.create({
-              data: {
-                documentId: group.documentId,
-                documentType: 'CC',
-                firstName: group.firstName,
-                lastName: group.lastName,
-                phone: group.phone || null,
-                address: group.address,
-                city: group.city,
-                neighborhood: group.neighborhood,
-                uniqueHash: patientHash,
-              },
+              data: buildPatientCreateData(group),
             });
           }
 
@@ -233,9 +412,8 @@ export class ExcelImportService {
               where: { id: delivery.id },
               data: {
                 priority: group.priority,
-                scheduledDate: group.scheduledDate,
-                scheduledTime: group.scheduledTime,
-                observations: group.observations,
+                pendingGeneratedAt: group.pendingGeneratedAt ?? delivery.pendingGeneratedAt,
+                observations: group.observations ?? delivery.observations,
                 documentNumber: group.documentNumber,
                 excelImportId: importId,
               },
@@ -248,13 +426,20 @@ export class ExcelImportService {
                 documentNumber: group.documentNumber,
                 patientId: patient.id,
                 priority: group.priority,
-                scheduledDate: group.scheduledDate,
-                scheduledTime: group.scheduledTime,
+                pendingGeneratedAt: group.pendingGeneratedAt ?? new Date(),
                 observations: group.observations,
                 uniqueHash: deliveryHash,
                 excelImportId: importId,
-                status: 'PENDING_CALL',
+                status: 'LIBRE',
               },
+            });
+            await deliveryStatusService.logStatusChange(tx, {
+              deliveryId: delivery.id,
+              fromStatus: null,
+              toStatus: 'LIBRE',
+              action: 'IMPORT_CREATED',
+              changedById: importRecord.importedById,
+              observations: `Importación ${importRecord.fileName}`,
             });
             insertedCount++;
           }
@@ -269,6 +454,7 @@ export class ExcelImportService {
                 data: {
                   code: item.medicationCode,
                   name: item.medicationName,
+                  cum: item.medicationCode.length >= 6 ? item.medicationCode : undefined,
                 },
               });
             }
@@ -280,7 +466,7 @@ export class ExcelImportService {
             if (existingItem) {
               await tx.deliveryItem.update({
                 where: { id: existingItem.id },
-                data: { quantity: item.quantity, lotNumber: item.lotNumber },
+                data: { quantity: item.quantity },
               });
             } else {
               await tx.deliveryItem.create({
@@ -288,7 +474,6 @@ export class ExcelImportService {
                   deliveryId: delivery.id,
                   medicationId: medication.id,
                   quantity: item.quantity,
-                  lotNumber: item.lotNumber,
                   uniqueHash: item.rowHash,
                 },
               });

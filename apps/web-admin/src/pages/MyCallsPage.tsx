@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea, Select } from '@/components/ui/textarea';
-import { Phone, Save, Search, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Phone, Save, Search, CheckCircle2, ExternalLink, RefreshCw } from 'lucide-react';
+import { CallNotificationBell } from '@/components/calls/CallNotificationBell';
 import {
   CALL_QUEUE_STATUS_LABELS,
   CALL_MANAGEMENT_LABELS,
   CALL_CATEGORY_LABELS,
   DELIVERY_STATUS_LABELS,
+  formatPatientName,
   getCallCategory,
   getDeliveryCallLockMessage,
   isDeliveryCallLocked,
@@ -62,6 +64,12 @@ interface CallAssignment {
       notes: string | null;
     };
     callHistory: Array<{ observations: string | null; calledAt: string }>;
+    items?: Array<{
+      id: string;
+      quantity: number;
+      lotNumber?: string | null;
+      medication: { name: string; code: string; cum?: string | null };
+    }>;
     evidence?: Array<{ id: string; fileName: string; type: string; createdAt: string }>;
     assignments?: Array<{
       courier?: { firstName: string; lastName: string } | null;
@@ -69,6 +77,19 @@ interface CallAssignment {
       intermunicipalRoute?: { routeCode: string; routeDate: string } | null;
     }>;
   };
+}
+
+function formatMedicationLine(item: NonNullable<CallAssignment['delivery']['items']>[number]) {
+  const parts = [`${item.medication.name} × ${item.quantity}`];
+  if (item.medication.cum) parts.push(`CUM ${item.medication.cum}`);
+  else if (item.medication.code) parts.push(item.medication.code);
+  if (item.lotNumber) parts.push(`Lote ${item.lotNumber}`);
+  return parts.join(' · ');
+}
+
+function medicationsSummary(items?: CallAssignment['delivery']['items']) {
+  if (!items?.length) return 'Sin medicamentos';
+  return items.map((i) => `${i.medication.name} ×${i.quantity}`).join(', ');
 }
 
 function getRouteLabel(delivery: CallAssignment['delivery']) {
@@ -155,13 +176,20 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const { data: calls, isLoading } = useQuery({
+  const { data: calls, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['my-calls'],
     queryFn: async () => {
       const res = await callsApi.myCalls({ limit: 100 });
       return res.data.data as CallAssignment[];
     },
+    refetchInterval: 30000,
   });
+
+  const handleRefresh = () => {
+    void refetch();
+    queryClient.invalidateQueries({ queryKey: ['notifications-unread'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications-recent'] });
+  };
 
   const categoryCounts = useMemo(() => {
     const counts: Record<CallCategoryId, number> = {
@@ -285,13 +313,42 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div className="space-y-6">
-      {!embedded && (
-        <div>
-          <h2 className="text-3xl font-bold">Mis Llamadas</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Cada fila es una <strong>entrega / orden</strong> (NroDocumento), no el paciente completo.
-            Un mismo paciente puede tener varias entregas activas a la vez.
-          </p>
+      {!embedded ? (
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold">Mis Llamadas</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Cada fila es una <strong>entrega / orden</strong> (NroDocumento), no el paciente completo.
+              Un mismo paciente puede tener varias entregas activas a la vez.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <CallNotificationBell />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Actualizar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-2">
+          <CallNotificationBell />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
         </div>
       )}
 
@@ -357,8 +414,9 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                         onClick={() => loadCall(call)}
                       >
                         <td className="p-2">
-                          {call.delivery.patient.firstName} {call.delivery.patient.lastName}
+                          {formatPatientName(call.delivery.patient)}
                           <div className="text-xs text-muted-foreground">{call.delivery.deliveryNumber}</div>
+                          <div className="text-xs text-muted-foreground">{medicationsSummary(call.delivery.items)}</div>
                         </td>
                         <td className="p-2">{call.delivery.documentNumber || '—'}</td>
                         <td className="p-2">{formatDate(call.callDate)}</td>
@@ -391,7 +449,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="font-medium">
-                      {call.delivery.patient.firstName} {call.delivery.patient.lastName}
+                      {formatPatientName(call.delivery.patient)}
                     </div>
                     <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs">
                       {DELIVERY_STATUS_LABELS[call.delivery.status] || call.delivery.status}
@@ -400,6 +458,9 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                   <div className="text-muted-foreground">
                     Entrega {call.delivery.deliveryNumber}
                     {call.delivery.documentNumber ? ` · Doc. ${call.delivery.documentNumber}` : ''}
+                  </div>
+                  <div className="text-xs text-muted-foreground line-clamp-2">
+                    {medicationsSummary(call.delivery.items)}
                   </div>
                   <div className="text-muted-foreground">
                     {CALL_QUEUE_STATUS_LABELS[call.status] || call.status}
@@ -426,9 +487,24 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
               <CardHeader><CardTitle>Entrega / orden</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p><strong>Número entrega:</strong> {selected.delivery.deliveryNumber}</p>
-                <p><strong>NroDocumento:</strong> {selected.delivery.documentNumber || '—'}</p>
+                <p><strong>Dispensación (NroDocumento):</strong> {selected.delivery.documentNumber || '—'}</p>
                 <p><strong>Estado entrega:</strong> {DELIVERY_STATUS_LABELS[selected.delivery.status] || selected.delivery.status}</p>
-                <p><strong>Paciente:</strong> {selected.delivery.patient.documentType} {selected.delivery.patient.documentId} — {selected.delivery.patient.firstName} {selected.delivery.patient.lastName}</p>
+                <p><strong>Paciente:</strong> {selected.delivery.patient.documentType} {selected.delivery.patient.documentId} — {formatPatientName(selected.delivery.patient)}</p>
+                <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                  <p className="font-semibold text-primary">Medicamentos de esta orden</p>
+                  <p className="text-xs text-muted-foreground">Ofrezca estos medicamentos al paciente en la llamada</p>
+                  {(selected.delivery.items?.length ?? 0) > 0 ? (
+                    <ul className="mt-2 space-y-1">
+                      {selected.delivery.items!.map((item) => (
+                        <li key={item.id} className="font-medium">
+                          {formatMedicationLine(item)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-muted-foreground">No hay medicamentos registrados en esta orden.</p>
+                  )}
+                </div>
                 {isDeliveredTab && (
                   <>
                     <p><strong>Fecha llamada:</strong> {formatDateTime(selected.callDate)}</p>

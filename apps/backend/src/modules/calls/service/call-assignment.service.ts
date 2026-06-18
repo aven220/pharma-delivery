@@ -4,10 +4,13 @@ import {
   CallResult,
   Prisma,
 } from '@prisma/client';
+import { BrandConfig } from '../../../config/brand';
 import { prisma } from '../../../infra/database/prisma';
 import { NotFoundError, ValidationError } from '../../../shared/errors/AppError';
+import { deliveryStatusService } from '../../deliveries/service/delivery-status.service';
+import { createUserNotification } from '../../notifications/notification.service';
 
-const PENDING_CALL_STATUSES = ['PENDING_CALL', 'PENDING', 'CALL_COMPLETED', 'RESCHEDULED'] as const;
+const PENDING_CALL_STATUSES = ['EMPACADO', 'PENDING_CALL', 'PENDING', 'CALL_COMPLETED', 'RESCHEDULED'] as const;
 
 const TERMINAL_DELIVERY_STATUSES = ['DELIVERED', 'CANCELLED', 'RETURNED'] as const;
 
@@ -22,7 +25,12 @@ function assertDeliveryCallable(status: string) {
     throw new ValidationError('Esta entrega fue devuelta.');
   }
 }
-import { deliveryStatusService } from '../../deliveries/service/delivery-status.service';
+
+function formatPatientDisplayName(patient: { firstName: string; lastName: string }) {
+  return patient.lastName === '.'
+    ? patient.firstName
+    : `${patient.firstName} ${patient.lastName}`.trim();
+}
 
 const STATUS_TO_CALL_RESULT: Partial<Record<CallQueueStatus, CallResult>> = {
   ANSWERED: 'ANSWERED',
@@ -130,7 +138,21 @@ export class CallAssignmentService {
           assertDeliveryCallable(delivery.status);
         }
         if (!PENDING_CALL_STATUSES.includes(delivery.status as (typeof PENDING_CALL_STATUSES)[number])) {
-          throw new ValidationError(`La entrega ${delivery.deliveryNumber} no está pendiente de llamada`);
+          throw new ValidationError(`La entrega ${delivery.deliveryNumber} no está lista para llamada (debe estar empacada)`);
+        }
+
+        if (delivery.status === 'EMPACADO') {
+          await tx.delivery.update({
+            where: { id: deliveryId },
+            data: { status: 'PENDING_CALL' },
+          });
+          await deliveryStatusService.logStatusChange(tx, {
+            deliveryId,
+            fromStatus: 'EMPACADO',
+            toStatus: 'PENDING_CALL',
+            action: 'ASSIGNED_TO_CALL',
+            changedById: assignedById,
+          });
         }
 
         await tx.callAssignment.updateMany({
@@ -164,6 +186,31 @@ export class CallAssignmentService {
       }
       return results;
     });
+
+    if (assignments.length > 0) {
+      const lines = assignments.map((a) => {
+        const doc = a.delivery.documentNumber || a.delivery.deliveryNumber;
+        const name = formatPatientDisplayName(a.delivery.patient);
+        return `${doc} — ${name}`;
+      });
+      const extra = lines.length > 3 ? ` (+${lines.length - 3} más)` : '';
+      await createUserNotification({
+        userId: operatorUserId,
+        type: 'ASSIGNMENT',
+        title: `${BrandConfig.notificationPrefix}: ${
+          assignments.length === 1 ? 'Nueva llamada asignada' : `${assignments.length} llamadas asignadas`
+        }`,
+        body: lines.slice(0, 3).join('; ') + extra,
+        data: {
+          kind: 'CALL_ASSIGNMENT',
+          tab: 'my-calls',
+          count: assignments.length,
+          assignmentIds: assignments.map((a) => a.id),
+          deliveryIds: assignments.map((a) => a.deliveryId),
+        },
+        sendPush: false,
+      });
+    }
 
     return assignments;
   }

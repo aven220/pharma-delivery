@@ -1,4 +1,7 @@
 export const DELIVERY_STATUS_LABELS: Record<string, string> = {
+  LIBRE: 'Libre',
+  EMPACADO: 'Empacado',
+  RECHAZADO: 'Rechazado',
   PENDING_CALL: 'Pendiente llamada',
   CALL_COMPLETED: 'Llamada realizada',
   CONFIRMED_FOR_DELIVERY: 'Confirmado para entrega',
@@ -110,6 +113,13 @@ export function getCallCategory(call: {
 
 export function translateLabel(map: Record<string, string>, key: string): string {
   return map[key] || key;
+}
+
+/** Nombre completo cuando Apellido es placeholder (importación masiva) */
+export function formatPatientName(p: { firstName: string; lastName?: string | null }): string {
+  const last = p.lastName?.trim();
+  if (!last || last === '.' || last === '-') return p.firstName.trim();
+  return `${p.firstName.trim()} ${last}`.trim();
 }
 
 export const INCIDENT_LABELS: Record<string, string> = {
