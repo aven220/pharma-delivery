@@ -21,7 +21,7 @@
     "db:diagnose": "node scripts/diagnose-db.mjs",
     "setup:lan": "node scripts/apply-lan-config.mjs",
     "setup:lan:full": "bash scripts/setup-lan.sh",
-    "fix:db": "node scripts/apply-lan-config.mjs && docker compose down && docker compose up -d postgres redis",
+    "check:ports": "scripts\\check-ports.bat",
     "db:seed": "npm run db:generate && npm run db:seed -w @pharma/backend",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

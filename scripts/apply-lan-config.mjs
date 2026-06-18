@@ -35,20 +35,23 @@ const HOST = cfg.DEV_HOST || '192.168.20.26';
 const API_PORT = cfg.DEV_API_PORT || '4000';
 const WEB_PORT = cfg.DEV_WEB_PORT || '5173';
 const DB_PORT = cfg.DEV_DB_PORT || cfg.POSTGRES_HOST_PORT || '5433';
+const REDIS_PORT = cfg.REDIS_HOST_PORT || '6380';
 
 const API_URL = `http://${HOST}:${API_PORT}`;
 const WEB_URL = `http://${HOST}:${WEB_PORT}`;
 const CORS = `http://localhost:${WEB_PORT},http://${HOST}:${WEB_PORT},http://localhost:8081`;
 
 console.log(`\nAplicando configuración LAN: ${HOST}\n`);
-console.log(`  API:  ${API_URL}`);
-console.log(`  Web:  ${WEB_URL}`);
-console.log(`  DB:   localhost:${DB_PORT}\n`);
+console.log(`  API:   ${API_URL}`);
+console.log(`  Web:   ${WEB_URL}`);
+console.log(`  DB:    localhost:${DB_PORT}`);
+console.log(`  Redis: localhost:${REDIS_PORT}\n`);
 
 writeIfMissing(
   join(root, '.env'),
-  `# Docker Compose — puerto PostgreSQL en el host (5433 evita conflicto Windows)
+  `# Docker Compose — puertos en el HOST (no chocan con otros servicios)
 POSTGRES_HOST_PORT=${DB_PORT}
+REDIS_HOST_PORT=${REDIS_PORT}
 `
 );
 
@@ -57,7 +60,7 @@ writeIfMissing(
   `NODE_ENV=development
 PORT=${API_PORT}
 DATABASE_URL=postgresql://pharma:pharma_secret@localhost:${DB_PORT}/pharma_delivery?schema=public
-REDIS_URL=redis://localhost:6379
+REDIS_URL=redis://localhost:${REDIS_PORT}
 JWT_ACCESS_SECRET=your-super-secret-access-key-min-32-chars!!
 JWT_REFRESH_SECRET=your-super-secret-refresh-key-min-32-chars!
 JWT_ACCESS_EXPIRES=15m
