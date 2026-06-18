@@ -26,6 +26,8 @@
     "docker:prod:logs": "bash scripts/docker-prod.sh logs -f",
     "docker:prod:tls": "bash scripts/generate-prod-tls.sh",
     "verify:prod": "bash scripts/verify-production.sh",
+    "qa:full-day": "node scripts/qa-full-day-simulation.mjs",
+    "backup:local": "bash scripts/backup-db-local.sh",
     "backup:run": "bash scripts/docker-prod.sh exec backup /usr/local/bin/pharma-backup.sh",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

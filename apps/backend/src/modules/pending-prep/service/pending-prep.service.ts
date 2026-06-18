@@ -55,41 +55,55 @@ export class PendingPrepService {
   }
 
   async summary() {
-    const [byStatus, byDispensacion, byCedula] = await Promise.all([
+    const prepWhere = { deletedAt: null, status: { in: PREP_STATUSES } };
+
+    const [byStatus, byDispensacion, byCedulaRows, totalCedulas] = await Promise.all([
       prisma.delivery.groupBy({
         by: ['status'],
-        where: { deletedAt: null, status: { in: PREP_STATUSES } },
+        where: prepWhere,
         _count: { _all: true },
       }),
       prisma.delivery.groupBy({
         by: ['documentNumber'],
-        where: { deletedAt: null, status: { in: PREP_STATUSES } },
+        where: prepWhere,
         _count: { _all: true },
       }),
-      prisma.delivery.findMany({
-        where: { deletedAt: null, status: { in: PREP_STATUSES } },
-        select: {
-          patient: { select: { documentId: true, firstName: true, lastName: true } },
-          status: true,
-        },
-      }),
+      prisma.$queryRaw<
+        Array<{
+          document_id: string;
+          first_name: string;
+          last_name: string;
+          libre: number;
+          empacado: number;
+          rechazado: number;
+        }>
+      >`
+        SELECT
+          p.document_id,
+          p.first_name,
+          p.last_name,
+          SUM(CASE WHEN d.status = 'LIBRE' THEN 1 ELSE 0 END)::int AS libre,
+          SUM(CASE WHEN d.status = 'EMPACADO' THEN 1 ELSE 0 END)::int AS empacado,
+          SUM(CASE WHEN d.status = 'RECHAZADO' THEN 1 ELSE 0 END)::int AS rechazado
+        FROM deliveries d
+        INNER JOIN patients p ON p.id = d.patient_id
+        WHERE d.deleted_at IS NULL
+          AND d.status IN ('LIBRE', 'EMPACADO', 'RECHAZADO')
+        GROUP BY p.document_id, p.first_name, p.last_name
+        ORDER BY (
+          SUM(CASE WHEN d.status = 'LIBRE' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN d.status = 'EMPACADO' THEN 1 ELSE 0 END) +
+          SUM(CASE WHEN d.status = 'RECHAZADO' THEN 1 ELSE 0 END)
+        ) DESC
+        LIMIT 50
+      `,
+      prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(DISTINCT d.patient_id)::bigint AS count
+        FROM deliveries d
+        WHERE d.deleted_at IS NULL
+          AND d.status IN ('LIBRE', 'EMPACADO', 'RECHAZADO')
+      `,
     ]);
-
-    const cedulaMap = new Map<string, { documentId: string; name: string; libre: number; empacado: number; rechazado: number }>();
-    for (const row of byCedula) {
-      const key = row.patient.documentId;
-      const entry = cedulaMap.get(key) || {
-        documentId: key,
-        name: `${row.patient.firstName} ${row.patient.lastName}`.trim(),
-        libre: 0,
-        empacado: 0,
-        rechazado: 0,
-      };
-      if (row.status === 'LIBRE') entry.libre++;
-      if (row.status === 'EMPACADO') entry.empacado++;
-      if (row.status === 'RECHAZADO') entry.rechazado++;
-      cedulaMap.set(key, entry);
-    }
 
     return {
       byStatus: byStatus.map((r) => ({ status: r.status, count: r._count._all })),
@@ -98,9 +112,15 @@ export class PendingPrepService {
         .sort((a, b) => b._count._all - a._count._all)
         .slice(0, 50)
         .map((r) => ({ documentNumber: r.documentNumber, count: r._count._all })),
-      byCedula: Array.from(cedulaMap.values()).sort(
-        (a, b) => b.libre + b.empacado + b.rechazado - (a.libre + a.empacado + a.rechazado)
-      ),
+      byCedula: byCedulaRows.map((r) => ({
+        documentId: r.document_id,
+        name: r.last_name === '.' ? r.first_name : `${r.first_name} ${r.last_name}`.trim(),
+        libre: r.libre,
+        empacado: r.empacado,
+        rechazado: r.rechazado,
+      })),
+      totalCedulas: Number(totalCedulas[0]?.count ?? 0),
+      cedulaLimit: 50,
     };
   }
 

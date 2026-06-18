@@ -583,7 +583,7 @@ export class CallAssignmentService {
   }
 
   async listOperators() {
-    return prisma.user.findMany({
+    const operators = await prisma.user.findMany({
       where: {
         deletedAt: null,
         status: 'ACTIVE',
@@ -597,6 +597,25 @@ export class CallAssignmentService {
         operatorProfile: { select: { code: true } },
       },
     });
+
+    const workload = await prisma.callAssignment.groupBy({
+      by: ['operatorUserId'],
+      where: {
+        deletedAt: null,
+        completedAt: null,
+        status: { in: ['PENDING', 'CALLED', 'ANSWERED', 'NO_ANSWER', 'OFF', 'WRONG_NUMBER', 'RESCHEDULE'] },
+      },
+      _count: { _all: true },
+    });
+
+    const loadMap = new Map(workload.map((w) => [w.operatorUserId, w._count._all]));
+
+    return operators
+      .map((op) => ({
+        ...op,
+        pendingCalls: loadMap.get(op.id) ?? 0,
+      }))
+      .sort((a, b) => a.pendingCalls - b.pendingCalls);
   }
 }
 

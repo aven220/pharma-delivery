@@ -1,0 +1,423 @@
+{
+  "results": [
+    {
+      "icon": "✅",
+      "msg": "Health check",
+      "detail": {
+        "status": "ok"
+      },
+      "ts": "2026-06-18T01:39:42.448Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Readiness (DB + Redis)",
+      "detail": {
+        "status": "ready",
+        "checks": {
+          "database": "ok",
+          "redis": "ok"
+        },
+        "instance": "backend-1",
+        "timestamp": "2026-06-18T01:39:42.453Z"
+      },
+      "ts": "2026-06-18T01:39:42.455Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Login admin",
+      "detail": {
+        "email": "admin@pharma.local",
+        "role": "ADMIN"
+      },
+      "ts": "2026-06-18T01:39:42.775Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Login supervisor",
+      "detail": {
+        "email": "supervisor@pharma.local",
+        "role": "SUPERVISOR"
+      },
+      "ts": "2026-06-18T01:39:43.063Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Login operator",
+      "detail": {
+        "email": "operator@pharma.local",
+        "role": "OPERATOR"
+      },
+      "ts": "2026-06-18T01:39:43.357Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Login courier",
+      "detail": {
+        "email": "courier@pharma.local",
+        "role": "DOMICILIARIO"
+      },
+      "ts": "2026-06-18T01:39:43.657Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Login auditor",
+      "detail": {
+        "email": "auditor@pharma.local",
+        "role": "AUDITOR"
+      },
+      "ts": "2026-06-18T01:39:43.944Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "10 logins concurrentes",
+      "detail": {
+        "ok": 10
+      },
+      "ts": "2026-06-18T01:39:46.227Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Salud de datos (data-health)",
+      "detail": {
+        "status": "healthy",
+        "dbSize": "52 MB",
+        "pendingLibre": 1266,
+        "retentionDays": 14
+      },
+      "ts": "2026-06-18T01:39:46.233Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 2: Importación Excel (50 entregas) ---",
+      "ts": "2026-06-18T01:39:46.234Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Importación Excel 50 filas",
+      "detail": {
+        "importId": "cmqiu170s00254ihtkguqt1d0",
+        "status": "PENDING",
+        "processed": 0
+      },
+      "ts": "2026-06-18T01:39:46.258Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Importación Excel procesada",
+      "detail": {
+        "status": "COMPLETED",
+        "processed": 50
+      },
+      "ts": "2026-06-18T01:39:47.290Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 3: Preparar pendientes ---",
+      "ts": "2026-06-18T01:39:47.290Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Resumen preparación pendientes",
+      "detail": {
+        "libre": 1266,
+        "totalCedulas": 1133,
+        "cedulaRows": 50,
+        "payloadBytes": 7161
+      },
+      "ts": "2026-06-18T01:39:47.321Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Summary payload acotado (<100KB)",
+      "detail": {
+        "summaryBytes": 7161
+      },
+      "ts": "2026-06-18T01:39:47.321Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Listado LIBRE (100 entregas)",
+      "detail": {},
+      "ts": "2026-06-18T01:39:47.381Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Empacados 30/30",
+      "ts": "2026-06-18T01:39:47.807Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Rechazados 5/5",
+      "ts": "2026-06-18T01:39:47.858Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Operador puede empacar (permiso deliveries.write)",
+      "ts": "2026-06-18T01:39:47.873Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 4: Llamadas — asignación ---",
+      "ts": "2026-06-18T01:39:47.873Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Listar operadores con carga",
+      "detail": {
+        "count": 1,
+        "operatorId": "cmpsxun95000lh2hnlxd54q5o",
+        "loads": [
+          {
+            "name": "Ana",
+            "pending": 32
+          }
+        ]
+      },
+      "ts": "2026-06-18T01:39:47.885Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Cola pendientes llamada (96)",
+      "ts": "2026-06-18T01:39:47.941Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Asignar 15 llamadas a operador",
+      "detail": {
+        "count": 15
+      },
+      "ts": "2026-06-18T01:39:48.208Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Notificación operador (campana)",
+      "detail": {
+        "unread": 3
+      },
+      "ts": "2026-06-18T01:39:48.214Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 5: Operador — Mis llamadas ---",
+      "ts": "2026-06-18T01:39:48.214Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Mis llamadas operador (64)",
+      "detail": {
+        "total": 64
+      },
+      "ts": "2026-06-18T01:39:48.274Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Gestión llamadas operador",
+      "detail": {
+        "confirmed": 6,
+        "rescheduled": 3,
+        "pending": 3
+      },
+      "ts": "2026-06-18T01:39:48.597Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Segunda tanda asignación (10 llamadas)",
+      "ts": "2026-06-18T01:39:48.732Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 6: Asignación domiciliarios ---",
+      "ts": "2026-06-18T01:39:48.732Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Listar domiciliarios",
+      "detail": {
+        "count": 2
+      },
+      "ts": "2026-06-18T01:39:48.762Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Entregas asignables a domiciliario",
+      "detail": {
+        "count": 6
+      },
+      "ts": "2026-06-18T01:39:48.790Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Asignar entregas a domiciliario",
+      "detail": {
+        "count": 6
+      },
+      "ts": "2026-06-18T01:39:48.935Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 7: Domiciliario — app móvil API ---",
+      "ts": "2026-06-18T01:39:48.935Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Domiciliario — mis entregas",
+      "detail": {
+        "count": 13
+      },
+      "ts": "2026-06-18T01:39:48.967Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Notificaciones domiciliario",
+      "detail": {
+        "unread": 26
+      },
+      "ts": "2026-06-18T01:39:48.971Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Auditor puede leer entregas",
+      "ts": "2026-06-18T01:39:48.994Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Auditor bloqueado en asignación (RBAC OK)",
+      "ts": "2026-06-18T01:39:48.996Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 8: Reportes / dashboard ---",
+      "ts": "2026-06-18T01:39:48.996Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Dashboard stats",
+      "detail": {
+        "keys": [
+          "pending",
+          "delivered",
+          "inRoute",
+          "failed",
+          "activeCouriers",
+          "callsToday",
+          "callEffectiveness",
+          "operatorPerformance",
+          "courierPerformance",
+          "dailyStats",
+          "weeklyStats",
+          "monthlyStats",
+          "pendingPatients",
+          "callManagementStats",
+          "operational"
+        ]
+      },
+      "ts": "2026-06-18T01:39:49.144Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Estadísticas gestión llamadas",
+      "detail": {
+        "total": 29,
+        "byResult": [
+          {
+            "result": "RESCHEDULE",
+            "count": 4
+          },
+          {
+            "result": "CONFIRMED_FOR_DELIVERY",
+            "count": 21
+          },
+          {
+            "result": "NOT_LOCATED",
+            "count": 4
+          }
+        ],
+        "operators": [
+          {
+            "operatorId": "cmpsxun95000lh2hnlxd54q5o",
+            "name": "Ana Operadora",
+            "total": 29,
+            "confirmed": 21,
+            "effectiveness": 72
+          }
+        ]
+      },
+      "ts": "2026-06-18T01:39:49.157Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "--- FASE 9: Prueba de carga (30 peticiones paralelas) ---",
+      "ts": "2026-06-18T01:39:49.157Z"
+    },
+    {
+      "icon": "✅",
+      "msg": "Carga 30 requests paralelos",
+      "detail": {
+        "ok": 30,
+        "ms": 153,
+        "rps": "196.1"
+      },
+      "ts": "2026-06-18T01:39:49.310Z"
+    },
+    {
+      "icon": "ℹ️",
+      "msg": "Rate limit login",
+      "detail": {
+        "note": "No se activó en 15 intentos (umbral alto)"
+      },
+      "ts": "2026-06-18T01:39:52.679Z"
+    }
+  ],
+  "timings": [
+    {
+      "label": "health",
+      "ms": 30,
+      "ok": true
+    },
+    {
+      "label": "login:admin",
+      "ms": 320,
+      "ok": true
+    },
+    {
+      "label": "login:supervisor",
+      "ms": 288,
+      "ok": true
+    },
+    {
+      "label": "login:operator",
+      "ms": 294,
+      "ok": true
+    },
+    {
+      "label": "login:courier",
+      "ms": 300,
+      "ok": true
+    },
+    {
+      "label": "login:auditor",
+      "ms": 287,
+      "ok": true
+    },
+    {
+      "label": "excel-upload",
+      "ms": 13,
+      "ok": true
+    },
+    {
+      "label": "pending-prep-summary",
+      "ms": 28,
+      "ok": true
+    },
+    {
+      "label": "assign-calls-15",
+      "ms": 267,
+      "ok": true
+    }
+  ],
+  "summary": {
+    "passed": 34,
+    "failed": 0,
+    "warnings": 0
+  }
+}

@@ -48,7 +48,8 @@ export function PendingCallsPage({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h2 className="text-3xl font-bold">Llamadas Pendientes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Solo entregas <strong>empacadas</strong> pueden asignarse. Cada fila es una dispensación (NroDispensacion).
+            Solo entregas <strong>empacadas</strong> pueden asignarse. Flujo: Preparar pendientes → Empacado →
+            asignar operador → operador confirma → Asignaciones domiciliario.
           </p>
         </div>
       )}
@@ -56,12 +57,45 @@ export function PendingCallsPage({ embedded = false }: { embedded?: boolean }) {
       <Card>
         <CardHeader><CardTitle>Asignar a operador</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-4">
-          <Select value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className="min-w-48">
+          <Select value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className="min-w-64">
             <option value="">Seleccionar operador</option>
-            {(operators || []).map((op: { id: string; firstName: string; lastName: string }) => (
-              <option key={op.id} value={op.id}>{op.firstName} {op.lastName}</option>
+            {(operators || []).map((op: {
+              id: string;
+              firstName: string;
+              lastName: string;
+              pendingCalls?: number;
+            }) => (
+              <option key={op.id} value={op.id}>
+                {op.firstName} {op.lastName}
+                {typeof op.pendingCalls === 'number'
+                  ? ` — ${op.pendingCalls} llamada(s) activa(s)`
+                  : ''}
+              </option>
             ))}
           </Select>
+          {operatorId && (() => {
+            const selected = (operators || []).find((o: { id: string }) => o.id === operatorId) as
+              | { pendingCalls?: number }
+              | undefined;
+            const load = selected?.pendingCalls ?? 0;
+            const afterAssign = load + selectedIds.length;
+            if (afterAssign > 25) {
+              return (
+                <p className="w-full text-sm text-amber-700">
+                  Atención: este operador quedará con <strong>{afterAssign}</strong> llamadas activas.
+                  Considere repartir la carga entre varios operadores.
+                </p>
+              );
+            }
+            if (load > 0) {
+              return (
+                <p className="w-full text-sm text-muted-foreground">
+                  Carga actual: {load} activa(s) · Tras asignar: {afterAssign}
+                </p>
+              );
+            }
+            return null;
+          })()}
           <Button
             disabled={!operatorId || selectedIds.length === 0 || assignMutation.isPending}
             onClick={() => assignMutation.mutate()}

@@ -64,8 +64,20 @@ export function AssignmentsPage() {
   const { data: deliveries } = useQuery({
     queryKey: ['confirmed-deliveries'],
     queryFn: async () => {
-      const res = await deliveriesApi.list({ status: 'CONFIRMED_FOR_DELIVERY', limit: 100 });
-      return res.data.data as DeliveryDTO[];
+      const [confirmed, scheduled] = await Promise.all([
+        deliveriesApi.list({ status: 'CONFIRMED_FOR_DELIVERY', limit: 100 }),
+        deliveriesApi.list({ status: 'SCHEDULED', limit: 100 }),
+      ]);
+      const merged = [
+        ...(confirmed.data.data as DeliveryDTO[]),
+        ...(scheduled.data.data as DeliveryDTO[]),
+      ];
+      const seen = new Set<string>();
+      return merged.filter((d) => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      });
     },
   });
 
@@ -129,7 +141,13 @@ export function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold">Asignaciones</h2>
+      <div>
+        <h2 className="text-3xl font-bold">Asignaciones</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Solo aparecen entregas <strong>confirmadas por el operador</strong> (estado Confirmado para entrega o
+          Programado). Si no ve entregas, el operador debe completar la llamada en Mis llamadas primero.
+        </p>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -152,7 +170,10 @@ export function AssignmentsPage() {
                 </label>
               ))}
               {(!deliveries || deliveries.length === 0) && (
-                <p className="text-sm text-muted-foreground">No hay entregas confirmadas.</p>
+                <p className="text-sm text-muted-foreground">
+                  No hay entregas confirmadas. Vaya a Llamadas → Mis llamadas y confirme las gestiones antes de
+                  asignar domiciliario.
+                </p>
               )}
             </div>
           </CardContent>

@@ -454,6 +454,8 @@ model Delivery {
   @@index([documentNumber])
   @@index([municipalityId])
   @@index([deletedAt])
+  @@index([status, deletedAt])
+  @@index([status, deletedAt, priority])
   @@map("deliveries")
 }
 
@@ -631,6 +633,7 @@ model CallAssignment {
   @@index([operatorUserId])
   @@index([status])
   @@index([assignedAt])
+  @@index([operatorUserId, status, deletedAt])
   @@map("call_assignments")
 }
 

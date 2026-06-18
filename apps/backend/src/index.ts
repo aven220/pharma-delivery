@@ -36,6 +36,7 @@ import deliveryStatusRoutes from './modules/deliveries/routes/delivery-status.ro
 import notificationRoutes from './modules/notifications/routes/notification.routes';
 import medicationRoutes from './modules/medications/routes/medication.routes';
 import reportsRoutes from './modules/reports/routes/reports.routes';
+import systemRoutes from './modules/system/routes/system.routes';
 import { createCourierRoutes } from './modules/couriers/routes/courier.routes';
 import { createIntermunicipalRouteRoutes } from './modules/intermunicipal-routes/routes/intermunicipal-route.routes';
 
@@ -106,6 +107,7 @@ app.use('/api/patients', authMiddleware, patientRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/medications', authMiddleware, medicationRoutes);
 app.use('/api/reports', authMiddleware, reportsRoutes);
+app.use('/api/system', authMiddleware, systemRoutes);
 app.use('/api/couriers', authMiddleware, createCourierRoutes(io));
 app.use('/api/intermunicipal-routes', authMiddleware, createIntermunicipalRouteRoutes(io));
 
