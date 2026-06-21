@@ -23,7 +23,7 @@ function loadHostConfig() {
   return vars;
 }
 
-function writeIfMissing(path, content) {
+function writeEnv(path, content) {
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(path, content, 'utf8');
@@ -32,7 +32,7 @@ function writeIfMissing(path, content) {
 
 const cfg = loadHostConfig();
 const HOST = cfg.DEV_HOST || '192.168.20.26';
-const API_PORT = cfg.DEV_API_PORT || '4000';
+const API_PORT = cfg.DEV_API_PORT || '4401';
 const WEB_PORT = cfg.DEV_WEB_PORT || '5173';
 const DB_PORT = cfg.DEV_DB_PORT || cfg.POSTGRES_HOST_PORT || '5433';
 const REDIS_PORT = cfg.REDIS_HOST_PORT || '6380';
@@ -47,7 +47,7 @@ console.log(`  Web:   ${WEB_URL}`);
 console.log(`  DB:    localhost:${DB_PORT}`);
 console.log(`  Redis: localhost:${REDIS_PORT}\n`);
 
-writeIfMissing(
+writeEnv(
   join(root, '.env'),
   `# Docker Compose — puertos en el HOST (no chocan con otros servicios)
 POSTGRES_HOST_PORT=${DB_PORT}
@@ -55,7 +55,7 @@ REDIS_HOST_PORT=${REDIS_PORT}
 `
 );
 
-writeIfMissing(
+writeEnv(
   join(root, 'apps/backend/.env'),
   `NODE_ENV=development
 PORT=${API_PORT}
@@ -75,7 +75,7 @@ APP_PUBLIC_URL=${WEB_URL}
 `
 );
 
-writeIfMissing(
+writeEnv(
   join(root, 'apps/web-admin/.env'),
   `# Panel admin — red local ${HOST}
 # Vacío = usa proxy Vite (mismo origen). Con URL = llama directo al API.
@@ -84,14 +84,14 @@ VITE_PROXY_TARGET=http://localhost:${API_PORT}
 `
 );
 
-writeIfMissing(
+writeEnv(
   join(root, 'apps/mobile-expo/.env'),
   `# App móvil — mismo WiFi que el servidor (${HOST})
 EXPO_PUBLIC_API_URL=${API_URL}
 `
 );
 
-writeIfMissing(
+writeEnv(
   join(root, '.env.lan'),
   `# Generado por scripts/apply-lan-config.mjs — no commitear secretos de prod
 DEV_HOST=${HOST}

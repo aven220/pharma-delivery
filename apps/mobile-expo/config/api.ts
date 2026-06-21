@@ -4,13 +4,13 @@ function normalizeBaseUrl(url: string): string {
   return url.replace(/\/$/, '');
 }
 
-/** En dev, si la URL es http sin puerto, el backend local usa 4000 (no 80). */
+/** En dev, si la URL es http sin puerto, usa el puerto LAN por defecto (4401). */
 function ensureDevPort(url: string): string {
   if (!__DEV__ || !url.startsWith('http://')) return url;
   try {
     const parsed = new URL(url);
     if (!parsed.port && (parsed.hostname === 'localhost' || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(parsed.hostname))) {
-      parsed.port = '4000';
+      parsed.port = '4401';
       const withPort = parsed.toString().replace(/\/$/, '');
       console.warn(`[A-AS] URL sin puerto — usando ${withPort}`);
       return withPort;
@@ -37,7 +37,7 @@ function assertProductionUrl(normalized: string): void {
     host.startsWith('192.168.') ||
     host.includes(':8080') ||
     host.includes(':8081') ||
-    host.includes(':4000')
+    host.includes(':4401')
   ) {
     throw new Error('No use localhost, IPs privadas ni puertos internos en MOBILE_API_URL.');
   }
@@ -54,9 +54,9 @@ function resolveApiUrl(): string {
         );
       }
       console.warn(
-        '[A-AS] Sin EXPO_PUBLIC_API_URL — usando http://localhost:4000 (solo emulador/simulador)'
+        '[A-AS] Sin EXPO_PUBLIC_API_URL — usando http://localhost:4401 (solo emulador/simulador)'
       );
-      return normalizeBaseUrl('http://localhost:4000');
+      return normalizeBaseUrl('http://localhost:4401');
     }
     throw new Error(
       'MOBILE_API_URL no configurada en el APK. Regenere con: EXPO_PUBLIC_API_URL=https://TU-HOST npm run build:apk'
