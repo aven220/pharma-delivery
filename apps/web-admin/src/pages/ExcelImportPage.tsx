@@ -108,11 +108,10 @@ function DeliveriesImportTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Columnas: Cedula, NroDispensacion, Nombre (completo), Telefono, Telefono2, Telefono3,
-              Direccion, CodigoMedicamento, Medicamento, Cantidad, Prioridad, FechaPendiente.
-              Una dispensación (misma cédula + mismo NroDispensacion) puede tener varias filas con distinto CodigoMedicamento.
-              Direccion, CodigoMedicamento, Medicamento, Cantidad, Prioridad, FechaPendiente.
-              Sin lote ni hora de entrega. Filas en cualquier orden — el sistema agrupa por cédula + dispensación.
+              Acepta su plantilla con: Cedula, NombrePaciente, NroDispensacion, FechaDispensacion,
+              CodigoMedicamento, NombreMedicamento, CantidadEntregada, Ciudad (y columnas equivalentes).
+              Varias filas con la misma cédula y mismo NroDispensacion pero distinto CodigoMedicamento
+              se agrupan en una sola entrega con varios medicamentos.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button

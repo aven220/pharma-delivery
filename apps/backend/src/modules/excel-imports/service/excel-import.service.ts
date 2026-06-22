@@ -191,40 +191,30 @@ export const DELIVERY_IMPORT_COLUMNS = [
 
 const DELIVERY_TEMPLATE_EXAMPLES = [
   {
-    Cedula: '1234567890',
-    NroDispensacion: 'DISP-001234',
-    Nombre: 'Juan Carlos Pérez García',
-    Telefono: '3001234567',
-    Telefono2: '3109876543',
-    Telefono3: '',
-    Direccion: 'Calle 10 #20-30 Barrio Centro',
-    CodigoMedicamento: 'CUM123456',
-    Medicamento: 'Acetaminofén 500 mg',
-    Cantidad: 2,
-    Prioridad: 'MEDIA',
-    FechaPendiente: '2026-06-08',
+    Cedula: '1010091313',
+    NombrePaciente: 'MARTHA CECILIA SOTO',
+    NroDispensacion: '10020',
+    FechaDispensacion: '2024-05-15',
+    CodigoMedicamento: '7702133010113',
+    NombreMedicamento: 'ACETAMINOFEN 500 MG TABLETA',
+    CantidadEntregada: 30,
+    Ciudad: 'BOGOTA',
   },
   {
-    Cedula: '',
-    NroDispensacion: '',
-    Nombre: '',
-    Telefono: '',
-    Telefono2: '',
-    Telefono3: '',
-    Direccion: '',
-    CodigoMedicamento: 'CUM789012',
-    Medicamento: 'Ibuprofeno 400 mg',
-    Cantidad: 1,
-    Prioridad: '',
-    FechaPendiente: '',
+    Cedula: '1010091313',
+    NombrePaciente: 'MARTHA CECILIA SOTO',
+    NroDispensacion: '10020',
+    FechaDispensacion: '2024-05-15',
+    CodigoMedicamento: '7702133010114',
+    NombreMedicamento: 'IBUPROFENO 400 MG TABLETA',
+    CantidadEntregada: 20,
+    Ciudad: 'BOGOTA',
   },
 ];
 
 export class ExcelImportService {
   generateTemplateBuffer(): Buffer {
-    const ws = XLSX.utils.json_to_sheet(DELIVERY_TEMPLATE_EXAMPLES, {
-      header: [...DELIVERY_IMPORT_COLUMNS],
-    });
+    const ws = XLSX.utils.json_to_sheet(DELIVERY_TEMPLATE_EXAMPLES);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Entregas pendientes');
 

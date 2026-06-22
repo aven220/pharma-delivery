@@ -58,6 +58,7 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   nrodocumento: 'NroDocumento',
   nombre: 'Nombre',
   nombrecompleto: 'Nombre',
+  nombrepaciente: 'Nombre',
   paciente: 'Nombre',
   telefono: 'Telefono',
   telefono1: 'Telefono',
@@ -73,14 +74,19 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   codproducto: 'CodigoMedicamento',
   cum: 'CUM',
   medicamento: 'Medicamento',
+  nombremedicamento: 'Medicamento',
   producto: 'Medicamento',
   descripcion: 'Medicamento',
   cantidad: 'Cantidad',
+  cantidadentregada: 'Cantidad',
+  cantidaddispensada: 'Cantidad',
   qty: 'Cantidad',
   prioridad: 'Prioridad',
   fechapendiente: 'FechaPendiente',
+  fechadispensacion: 'FechaPendiente',
   fechaentrega: 'FechaEntrega',
   observaciones: 'Observaciones',
+  nombrepunto: 'Observaciones',
 };
 
 export function normalizeExcelCell(val: unknown): string {
@@ -111,7 +117,14 @@ export function mapRawExcelRow(raw: Record<string, unknown>): ExcelRow {
     if (!alias) continue;
     const cell = normalizeExcelCell(value);
     if (!cell) continue;
-    mapped[alias] = cell;
+    // No sobrescribir un valor ya mapeado con uno vacío de otra columna alias
+    if (!mapped[alias] || cell) {
+      mapped[alias] = cell;
+    }
+  }
+  // CUM explícito como código si CodigoMedicamento vino vacío
+  if (!mapped.CodigoMedicamento && mapped.CUM) {
+    mapped.CodigoMedicamento = mapped.CUM;
   }
   return mapped;
 }

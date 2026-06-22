@@ -6,6 +6,7 @@ import {
   buildMedicationKey,
   fillDownImportRows,
   groupImportRows,
+  mapRawExcelRow,
   type ExcelRow,
 } from '../modules/excel-imports/service/excel-import.rows';
 
@@ -95,12 +96,41 @@ describe('Excel import — fill-down y agrupación', () => {
     assert.equal(delivery.items[1].medicationCode, 'MED-B');
   });
 
-  it('rechaza fila suelta sin cédula ni contexto previo', () => {
-    const { errors } = groupImportRows(
-      [{ CodigoMedicamento: 'MED-X', Medicamento: 'Solo med' }],
-      groupDeps
-    );
-    assert.equal(errors.length, 1);
-    assert.match(errors[0].error, /Cedula/i);
+  it('agrupa plantilla real: misma dispensación, distinto CodigoMedicamento', () => {
+    const rows = [
+      mapRawExcelRow({
+        Cedula: '1010091313',
+        NombrePaciente: 'MARTHA CECILIA SOTO',
+        NroDispensacion: '10020',
+        FechaDispensacion: '2024-05-15',
+        CodigoMedicamento: '7702133010113',
+        NombreMedicamento: 'ACETAMINOFEN 500 MG TABLETA',
+        CantidadEntregada: 30,
+        Ciudad: 'BOGOTA',
+      }),
+      mapRawExcelRow({
+        Cedula: '1010091313',
+        NombrePaciente: 'MARTHA CECILIA SOTO',
+        NroDispensacion: '10020',
+        FechaDispensacion: '2024-05-15',
+        CodigoMedicamento: '7702133010114',
+        NombreMedicamento: 'IBUPROFENO 400 MG TABLETA',
+        CantidadEntregada: 20,
+        Ciudad: 'BOGOTA',
+      }),
+    ];
+
+    assert.equal(rows[0].Nombre, 'MARTHA CECILIA SOTO');
+    assert.equal(rows[0].Medicamento, 'ACETAMINOFEN 500 MG TABLETA');
+    assert.equal(rows[0].Cantidad, '30');
+    assert.equal(rows[1].CodigoMedicamento, '7702133010114');
+
+    const { grouped, errors } = groupImportRows(rows, groupDeps);
+    assert.equal(errors.length, 0);
+    assert.equal(grouped.size, 1);
+    const delivery = [...grouped.values()][0];
+    assert.equal(delivery.items.length, 2);
+    assert.equal(delivery.items[0].quantity, 30);
+    assert.equal(delivery.items[1].quantity, 20);
   });
 });
