@@ -32,6 +32,7 @@
     "docker:prod:tls": "bash scripts/generate-prod-tls.sh",
     "verify:prod": "bash scripts/verify-production.sh",
     "qa:full-day": "node scripts/qa-full-day-simulation.mjs",
+    "verify:dispensacion": "node scripts/verify-dispensacion.mjs",
     "backup:local": "bash scripts/backup-db-local.sh",
     "backup:windows": "scripts\\BACKUP.bat",
     "start:service": "scripts\\INICIAR-SERVICIO.bat",

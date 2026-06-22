@@ -49,10 +49,14 @@ export interface ExcelRow {
 const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   cedula: 'Cedula',
   documento: 'Cedula',
+  numeroidentificacion: 'Cedula',
+  identificacion: 'Cedula',
   numerodocumento: 'Cedula',
   cedulapaciente: 'Cedula',
   nrodispensacion: 'NroDispensacion',
   numerodispensacion: 'NroDispensacion',
+  numerodisp: 'NroDispensacion',
+  nodisp: 'NroDispensacion',
   dispensacion: 'NroDispensacion',
   nodispensacion: 'NroDispensacion',
   nrodocumento: 'NroDocumento',
@@ -70,6 +74,8 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   barrio: 'Barrio',
   codigomedicamento: 'CodigoMedicamento',
   codmedicamento: 'CodigoMedicamento',
+  codigocum: 'CodigoMedicamento',
+  codigoproducto: 'CodigoMedicamento',
   codigo: 'CodigoMedicamento',
   codproducto: 'CodigoMedicamento',
   cum: 'CUM',
@@ -191,6 +197,41 @@ export function fillDownImportRows(rows: ExcelRow[]): ExcelRow[] {
   }
 
   return filled;
+}
+
+/** Detecta fila de encabezados (aunque no sea la fila 1) y parsea datos. */
+export function parseExcelSheetMatrix(matrix: unknown[][]): ExcelRow[] {
+  let headerRowIdx = 0;
+  for (let i = 0; i < Math.min(matrix.length, 15); i++) {
+    const row = matrix[i];
+    if (!Array.isArray(row)) continue;
+    const keys = row.map((c) => normalizeHeaderKey(String(c ?? '')));
+    const hasPatient = keys.some((k) =>
+      ['cedula', 'nombrepaciente', 'nombrecompleto', 'numeroidentificacion'].includes(k)
+    );
+    const hasMed = keys.some((k) =>
+      ['codigomedicamento', 'nombremedicamento', 'cum', 'codigocum'].includes(k)
+    );
+    if (hasPatient && hasMed) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+
+  const headers = (matrix[headerRowIdx] ?? []).map((h) => String(h ?? '').trim());
+  const mapped: ExcelRow[] = [];
+
+  for (const row of matrix.slice(headerRowIdx + 1)) {
+    if (!Array.isArray(row)) continue;
+    const raw: Record<string, unknown> = {};
+    headers.forEach((header, idx) => {
+      if (header) raw[header] = row[idx];
+    });
+    const excelRow = mapRawExcelRow(raw);
+    if (!isBlankImportRow(excelRow)) mapped.push(excelRow);
+  }
+
+  return mapped;
 }
 
 export function buildMedicationKey(medicationCode: string, medicationName: string): string {

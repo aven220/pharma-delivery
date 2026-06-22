@@ -17,7 +17,7 @@ import {
   getCell,
   getDispensacionNumber,
   groupImportRows,
-  mapRawExcelRow,
+  parseExcelSheetMatrix,
 } from './excel-import.rows';
 
 export {
@@ -165,13 +165,13 @@ function buildPatientUpdateIfEmpty(
 }
 
 function parseExcelSheet(sheet: XLSX.WorkSheet): ExcelRow[] {
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    raw: false,
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
     defval: '',
-  });
-  const mapped = rawRows.map(mapRawExcelRow);
-  const filled = fillDownImportRows(mapped);
-  return sortImportRows(filled);
+    raw: false,
+  }) as unknown[][];
+  const mapped = parseExcelSheetMatrix(matrix);
+  return sortImportRows(fillDownImportRows(mapped));
 }
 
 export const DELIVERY_IMPORT_COLUMNS = [
@@ -424,6 +424,12 @@ export class ExcelImportService {
       updatedCount,
       errors: errors.length,
       groups: grouped.size,
+      itemsPerGroup: [...grouped.values()].map((g) => ({
+        dispensacion: g.documentNumber,
+        cedula: g.documentId,
+        items: g.items.length,
+        meds: g.items.map((i) => i.medicationCode),
+      })),
     });
   }
 
