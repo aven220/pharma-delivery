@@ -78,14 +78,43 @@ interface GroupedDelivery {
   groupHash: string;
 }
 
+function normalizeExcelCell(val: unknown): string {
+  if (val === undefined || val === null) return '';
+  if (typeof val === 'number') {
+    if (!Number.isFinite(val)) return '';
+    // Evita notación científica y pérdida de precisión en cédulas / CUM largos
+    if (Number.isInteger(val)) return String(val);
+    const asInt = Math.trunc(val);
+    if (Math.abs(val - asInt) < 1e-9) return String(asInt);
+    return String(val);
+  }
+  return String(val).trim();
+}
+
 function getCell(row: ExcelRow, ...keys: (keyof ExcelRow)[]): string {
   for (const key of keys) {
-    const val = row[key];
-    if (val !== undefined && val !== null && String(val).trim()) {
-      return String(val).trim();
-    }
+    const val = normalizeExcelCell(row[key]);
+    if (val) return val;
   }
   return '';
+}
+
+/** Clave única por medicamento dentro de una dispensación (código distinto = línea distinta). */
+export function buildMedicationKey(medicationCode: string, medicationName: string): string {
+  const code = medicationCode.trim().toUpperCase();
+  if (code) return code;
+  const name = medicationName.trim().toUpperCase();
+  return name ? `NAME:${name}` : 'UNKNOWN-MED';
+}
+
+export function buildDeliveryItemHash(
+  documentId: string,
+  documentNumber: string,
+  medicationCode: string,
+  medicationName: string
+): string {
+  const medKey = buildMedicationKey(medicationCode, medicationName);
+  return generateHash(documentId, documentNumber || 'NONE', medKey);
 }
 
 function getDispensacionNumber(row: ExcelRow): string {
@@ -281,7 +310,7 @@ export class ExcelImportService {
       ['Instrucciones'],
       ['Nombre', 'Nombre completo del paciente (un solo campo)'],
       ['Telefono / Telefono2 / Telefono3', 'Hasta 3 teléfonos. También puede separar con / en Telefono'],
-      ['FechaPendiente', 'Fecha en que se generó el pendiente (no la entrega)'],
+      ['CodigoMedicamento', 'Código único por medicamento — varias filas con misma cédula y dispensación pero distinto código = varios medicamentos en la misma entrega'],
       ['Lote', 'No incluir — se registra al empacar en Preparar pendientes'],
       ['HoraEntrega', 'No incluir — se define en llamadas / gestión'],
     ]);
@@ -303,7 +332,7 @@ export class ExcelImportService {
     const buffer = await fs.readFile(filePath);
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet);
+    const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, { raw: false, defval: '' });
     const sortedRows = sortImportRows(rows);
 
     const errors: Array<{ row: number; error: string }> = [];
@@ -324,8 +353,13 @@ export class ExcelImportService {
         }
 
         const groupKey = generateHash(documentId, documentNumber || 'NONE');
-        const medKey = medicationCode || generateHash(medicationName).slice(0, 8).toUpperCase();
-        const rowHash = generateHash(documentId, documentNumber || 'NONE', medKey);
+        const medKey = buildMedicationKey(medicationCode, medicationName);
+        const rowHash = buildDeliveryItemHash(
+          documentId,
+          documentNumber,
+          medicationCode,
+          medicationName
+        );
 
         const quantityRaw = getCell(row, 'Cantidad', 'cantidad') || '1';
         const quantity = Math.max(1, parseInt(String(quantityRaw), 10) || 1);

@@ -6,7 +6,7 @@
       "detail": {
         "status": "ok"
       },
-      "ts": "2026-06-18T01:39:42.448Z"
+      "ts": "2026-06-22T00:54:06.279Z"
     },
     {
       "icon": "✅",
@@ -18,9 +18,9 @@
           "redis": "ok"
         },
         "instance": "backend-1",
-        "timestamp": "2026-06-18T01:39:42.453Z"
+        "timestamp": "2026-06-22T00:54:06.288Z"
       },
-      "ts": "2026-06-18T01:39:42.455Z"
+      "ts": "2026-06-22T00:54:06.289Z"
     },
     {
       "icon": "✅",
@@ -29,7 +29,7 @@
         "email": "admin@pharma.local",
         "role": "ADMIN"
       },
-      "ts": "2026-06-18T01:39:42.775Z"
+      "ts": "2026-06-22T00:54:06.711Z"
     },
     {
       "icon": "✅",
@@ -38,7 +38,7 @@
         "email": "supervisor@pharma.local",
         "role": "SUPERVISOR"
       },
-      "ts": "2026-06-18T01:39:43.063Z"
+      "ts": "2026-06-22T00:54:06.962Z"
     },
     {
       "icon": "✅",
@@ -47,7 +47,7 @@
         "email": "operator@pharma.local",
         "role": "OPERATOR"
       },
-      "ts": "2026-06-18T01:39:43.357Z"
+      "ts": "2026-06-22T00:54:07.217Z"
     },
     {
       "icon": "✅",
@@ -56,7 +56,7 @@
         "email": "courier@pharma.local",
         "role": "DOMICILIARIO"
       },
-      "ts": "2026-06-18T01:39:43.657Z"
+      "ts": "2026-06-22T00:54:07.480Z"
     },
     {
       "icon": "✅",
@@ -65,7 +65,7 @@
         "email": "auditor@pharma.local",
         "role": "AUDITOR"
       },
-      "ts": "2026-06-18T01:39:43.944Z"
+      "ts": "2026-06-22T00:54:07.723Z"
     },
     {
       "icon": "✅",
@@ -73,33 +73,33 @@
       "detail": {
         "ok": 10
       },
-      "ts": "2026-06-18T01:39:46.227Z"
+      "ts": "2026-06-22T00:54:10.099Z"
     },
     {
       "icon": "✅",
       "msg": "Salud de datos (data-health)",
       "detail": {
         "status": "healthy",
-        "dbSize": "52 MB",
-        "pendingLibre": 1266,
+        "dbSize": "53 MB",
+        "pendingLibre": 1230,
         "retentionDays": 14
       },
-      "ts": "2026-06-18T01:39:46.233Z"
+      "ts": "2026-06-22T00:54:10.108Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 2: Importación Excel (50 entregas) ---",
-      "ts": "2026-06-18T01:39:46.234Z"
+      "ts": "2026-06-22T00:54:10.108Z"
     },
     {
       "icon": "✅",
       "msg": "Importación Excel 50 filas",
       "detail": {
-        "importId": "cmqiu170s00254ihtkguqt1d0",
+        "importId": "cmqoi5yh70025h29jddzbpr1o",
         "status": "PENDING",
         "processed": 0
       },
-      "ts": "2026-06-18T01:39:46.258Z"
+      "ts": "2026-06-22T00:54:10.125Z"
     },
     {
       "icon": "✅",
@@ -108,57 +108,57 @@
         "status": "COMPLETED",
         "processed": 50
       },
-      "ts": "2026-06-18T01:39:47.290Z"
+      "ts": "2026-06-22T00:54:10.631Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 3: Preparar pendientes ---",
-      "ts": "2026-06-18T01:39:47.290Z"
+      "ts": "2026-06-22T00:54:10.631Z"
     },
     {
       "icon": "✅",
       "msg": "Resumen preparación pendientes",
       "detail": {
-        "libre": 1266,
-        "totalCedulas": 1133,
+        "libre": 1230,
+        "totalCedulas": 1113,
         "cedulaRows": 50,
-        "payloadBytes": 7161
+        "payloadBytes": 7171
       },
-      "ts": "2026-06-18T01:39:47.321Z"
+      "ts": "2026-06-22T00:54:10.650Z"
     },
     {
       "icon": "✅",
       "msg": "Summary payload acotado (<100KB)",
       "detail": {
-        "summaryBytes": 7161
+        "summaryBytes": 7171
       },
-      "ts": "2026-06-18T01:39:47.321Z"
+      "ts": "2026-06-22T00:54:10.650Z"
     },
     {
       "icon": "✅",
       "msg": "Listado LIBRE (100 entregas)",
       "detail": {},
-      "ts": "2026-06-18T01:39:47.381Z"
+      "ts": "2026-06-22T00:54:10.683Z"
     },
     {
       "icon": "✅",
       "msg": "Empacados 30/30",
-      "ts": "2026-06-18T01:39:47.807Z"
+      "ts": "2026-06-22T00:54:10.877Z"
     },
     {
       "icon": "✅",
       "msg": "Rechazados 5/5",
-      "ts": "2026-06-18T01:39:47.858Z"
+      "ts": "2026-06-22T00:54:10.904Z"
     },
     {
       "icon": "✅",
       "msg": "Operador puede empacar (permiso deliveries.write)",
-      "ts": "2026-06-18T01:39:47.873Z"
+      "ts": "2026-06-22T00:54:10.911Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 4: Llamadas — asignación ---",
-      "ts": "2026-06-18T01:39:47.873Z"
+      "ts": "2026-06-22T00:54:10.911Z"
     },
     {
       "icon": "✅",
@@ -169,16 +169,16 @@
         "loads": [
           {
             "name": "Ana",
-            "pending": 32
+            "pending": 45
           }
         ]
       },
-      "ts": "2026-06-18T01:39:47.885Z"
+      "ts": "2026-06-22T00:54:10.918Z"
     },
     {
       "icon": "✅",
-      "msg": "Cola pendientes llamada (96)",
-      "ts": "2026-06-18T01:39:47.941Z"
+      "msg": "Cola pendientes llamada (100)",
+      "ts": "2026-06-22T00:54:10.935Z"
     },
     {
       "icon": "✅",
@@ -186,28 +186,28 @@
       "detail": {
         "count": 15
       },
-      "ts": "2026-06-18T01:39:48.208Z"
+      "ts": "2026-06-22T00:54:11.027Z"
     },
     {
       "icon": "✅",
       "msg": "Notificación operador (campana)",
       "detail": {
-        "unread": 3
+        "unread": 1
       },
-      "ts": "2026-06-18T01:39:48.214Z"
+      "ts": "2026-06-22T00:54:11.029Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 5: Operador — Mis llamadas ---",
-      "ts": "2026-06-18T01:39:48.214Z"
+      "ts": "2026-06-22T00:54:11.029Z"
     },
     {
       "icon": "✅",
-      "msg": "Mis llamadas operador (64)",
+      "msg": "Mis llamadas operador (89)",
       "detail": {
-        "total": 64
+        "total": 89
       },
-      "ts": "2026-06-18T01:39:48.274Z"
+      "ts": "2026-06-22T00:54:11.070Z"
     },
     {
       "icon": "✅",
@@ -217,17 +217,17 @@
         "rescheduled": 3,
         "pending": 3
       },
-      "ts": "2026-06-18T01:39:48.597Z"
+      "ts": "2026-06-22T00:54:11.211Z"
     },
     {
       "icon": "✅",
       "msg": "Segunda tanda asignación (10 llamadas)",
-      "ts": "2026-06-18T01:39:48.732Z"
+      "ts": "2026-06-22T00:54:11.267Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 6: Asignación domiciliarios ---",
-      "ts": "2026-06-18T01:39:48.732Z"
+      "ts": "2026-06-22T00:54:11.267Z"
     },
     {
       "icon": "✅",
@@ -235,7 +235,7 @@
       "detail": {
         "count": 2
       },
-      "ts": "2026-06-18T01:39:48.762Z"
+      "ts": "2026-06-22T00:54:11.290Z"
     },
     {
       "icon": "✅",
@@ -243,7 +243,7 @@
       "detail": {
         "count": 6
       },
-      "ts": "2026-06-18T01:39:48.790Z"
+      "ts": "2026-06-22T00:54:11.306Z"
     },
     {
       "icon": "✅",
@@ -251,43 +251,43 @@
       "detail": {
         "count": 6
       },
-      "ts": "2026-06-18T01:39:48.935Z"
+      "ts": "2026-06-22T00:54:11.378Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 7: Domiciliario — app móvil API ---",
-      "ts": "2026-06-18T01:39:48.935Z"
+      "ts": "2026-06-22T00:54:11.378Z"
     },
     {
       "icon": "✅",
       "msg": "Domiciliario — mis entregas",
       "detail": {
-        "count": 13
+        "count": 19
       },
-      "ts": "2026-06-18T01:39:48.967Z"
+      "ts": "2026-06-22T00:54:11.393Z"
     },
     {
       "icon": "✅",
       "msg": "Notificaciones domiciliario",
       "detail": {
-        "unread": 26
+        "unread": 32
       },
-      "ts": "2026-06-18T01:39:48.971Z"
+      "ts": "2026-06-22T00:54:11.395Z"
     },
     {
       "icon": "✅",
       "msg": "Auditor puede leer entregas",
-      "ts": "2026-06-18T01:39:48.994Z"
+      "ts": "2026-06-22T00:54:11.404Z"
     },
     {
       "icon": "✅",
       "msg": "Auditor bloqueado en asignación (RBAC OK)",
-      "ts": "2026-06-18T01:39:48.996Z"
+      "ts": "2026-06-22T00:54:11.405Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 8: Reportes / dashboard ---",
-      "ts": "2026-06-18T01:39:48.996Z"
+      "ts": "2026-06-22T00:54:11.405Z"
     },
     {
       "icon": "✅",
@@ -311,53 +311,53 @@
           "operational"
         ]
       },
-      "ts": "2026-06-18T01:39:49.144Z"
+      "ts": "2026-06-22T00:54:11.538Z"
     },
     {
       "icon": "✅",
       "msg": "Estadísticas gestión llamadas",
       "detail": {
-        "total": 29,
+        "total": 41,
         "byResult": [
           {
             "result": "RESCHEDULE",
-            "count": 4
+            "count": 7
           },
           {
             "result": "CONFIRMED_FOR_DELIVERY",
-            "count": 21
+            "count": 27
           },
           {
             "result": "NOT_LOCATED",
-            "count": 4
+            "count": 7
           }
         ],
         "operators": [
           {
             "operatorId": "cmpsxun95000lh2hnlxd54q5o",
             "name": "Ana Operadora",
-            "total": 29,
-            "confirmed": 21,
-            "effectiveness": 72
+            "total": 41,
+            "confirmed": 27,
+            "effectiveness": 66
           }
         ]
       },
-      "ts": "2026-06-18T01:39:49.157Z"
+      "ts": "2026-06-22T00:54:11.549Z"
     },
     {
       "icon": "ℹ️",
       "msg": "--- FASE 9: Prueba de carga (30 peticiones paralelas) ---",
-      "ts": "2026-06-18T01:39:49.157Z"
+      "ts": "2026-06-22T00:54:11.549Z"
     },
     {
       "icon": "✅",
       "msg": "Carga 30 requests paralelos",
       "detail": {
         "ok": 30,
-        "ms": 153,
-        "rps": "196.1"
+        "ms": 150,
+        "rps": "200.0"
       },
-      "ts": "2026-06-18T01:39:49.310Z"
+      "ts": "2026-06-22T00:54:11.700Z"
     },
     {
       "icon": "ℹ️",
@@ -365,53 +365,53 @@
       "detail": {
         "note": "No se activó en 15 intentos (umbral alto)"
       },
-      "ts": "2026-06-18T01:39:52.679Z"
+      "ts": "2026-06-22T00:54:15.715Z"
     }
   ],
   "timings": [
     {
       "label": "health",
-      "ms": 30,
+      "ms": 304,
       "ok": true
     },
     {
       "label": "login:admin",
-      "ms": 320,
+      "ms": 422,
       "ok": true
     },
     {
       "label": "login:supervisor",
-      "ms": 288,
+      "ms": 251,
       "ok": true
     },
     {
       "label": "login:operator",
-      "ms": 294,
+      "ms": 255,
       "ok": true
     },
     {
       "label": "login:courier",
-      "ms": 300,
+      "ms": 263,
       "ok": true
     },
     {
       "label": "login:auditor",
-      "ms": 287,
+      "ms": 243,
       "ok": true
     },
     {
       "label": "excel-upload",
-      "ms": 13,
+      "ms": 11,
       "ok": true
     },
     {
       "label": "pending-prep-summary",
-      "ms": 28,
+      "ms": 19,
       "ok": true
     },
     {
       "label": "assign-calls-15",
-      "ms": 267,
+      "ms": 92,
       "ok": true
     }
   ],
