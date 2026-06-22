@@ -8,126 +8,22 @@ import { logger } from '../../../config/logger';
 import { ValidationError, NotFoundError } from '../../../shared/errors/AppError';
 import { deliveryStatusService } from '../../deliveries/service/delivery-status.service';
 import { DeliveryPriority, Prisma } from '@prisma/client';
+import {
+  type ExcelRow,
+  type GroupedImportDelivery,
+  buildDeliveryItemHash,
+  buildMedicationKey,
+  fillDownImportRows,
+  getCell,
+  getDispensacionNumber,
+  groupImportRows,
+  mapRawExcelRow,
+} from './excel-import.rows';
 
-interface ExcelRow {
-  Cedula?: string;
-  cedula?: string;
-  NroDocumento?: string;
-  nroDocumento?: string;
-  NroDispensacion?: string;
-  nroDispensacion?: string;
-  Dispensacion?: string;
-  dispensacion?: string;
-  Nombre?: string;
-  nombre?: string;
-  Apellido?: string;
-  apellido?: string;
-  Telefono?: string;
-  telefono?: string;
-  Telefono2?: string;
-  telefono2?: string;
-  Telefono3?: string;
-  telefono3?: string;
-  TelefonoAlt?: string;
-  telefonoAlt?: string;
-  Direccion?: string;
-  direccion?: string;
-  Ciudad?: string;
-  ciudad?: string;
-  Barrio?: string;
-  barrio?: string;
-  CodigoMedicamento?: string;
-  codigoMedicamento?: string;
-  CUM?: string;
-  cum?: string;
-  Medicamento?: string;
-  medicamento?: string;
-  Cantidad?: number | string;
-  cantidad?: number | string;
-  Prioridad?: string;
-  prioridad?: string;
-  FechaPendiente?: string | number;
-  fechaPendiente?: string | number;
-  FechaEntrega?: string | number;
-  fechaEntrega?: string | number;
-  Observaciones?: string;
-  observaciones?: string;
-}
-
-interface GroupedDelivery {
-  documentId: string;
-  documentNumber: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  phoneAlt?: string;
-  phoneFamily?: string;
-  phoneAlternative?: string;
-  address: string;
-  city?: string;
-  neighborhood?: string;
-  priority: DeliveryPriority;
-  pendingGeneratedAt?: Date;
-  observations?: string;
-  items: Array<{
-    medicationCode: string;
-    medicationName: string;
-    quantity: number;
-    rowHash: string;
-  }>;
-  groupHash: string;
-}
-
-function normalizeExcelCell(val: unknown): string {
-  if (val === undefined || val === null) return '';
-  if (typeof val === 'number') {
-    if (!Number.isFinite(val)) return '';
-    // Evita notación científica y pérdida de precisión en cédulas / CUM largos
-    if (Number.isInteger(val)) return String(val);
-    const asInt = Math.trunc(val);
-    if (Math.abs(val - asInt) < 1e-9) return String(asInt);
-    return String(val);
-  }
-  return String(val).trim();
-}
-
-function getCell(row: ExcelRow, ...keys: (keyof ExcelRow)[]): string {
-  for (const key of keys) {
-    const val = normalizeExcelCell(row[key]);
-    if (val) return val;
-  }
-  return '';
-}
-
-/** Clave única por medicamento dentro de una dispensación (código distinto = línea distinta). */
-export function buildMedicationKey(medicationCode: string, medicationName: string): string {
-  const code = medicationCode.trim().toUpperCase();
-  if (code) return code;
-  const name = medicationName.trim().toUpperCase();
-  return name ? `NAME:${name}` : 'UNKNOWN-MED';
-}
-
-export function buildDeliveryItemHash(
-  documentId: string,
-  documentNumber: string,
-  medicationCode: string,
-  medicationName: string
-): string {
-  const medKey = buildMedicationKey(medicationCode, medicationName);
-  return generateHash(documentId, documentNumber || 'NONE', medKey);
-}
-
-function getDispensacionNumber(row: ExcelRow): string {
-  return getCell(
-    row,
-    'NroDispensacion',
-    'nroDispensacion',
-    'Dispensacion',
-    'dispensacion',
-    'NroDocumento',
-    'nroDocumento'
-  );
-}
+export {
+  buildDeliveryItemHash,
+  buildMedicationKey,
+} from './excel-import.rows';
 
 function parsePatientName(row: ExcelRow): { firstName: string; lastName: string } {
   const fullName = getCell(row, 'Nombre', 'nombre');
@@ -213,7 +109,7 @@ function parseExcelDate(value: string | number | undefined): Date | undefined {
   return isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function buildPatientCreateData(group: GroupedDelivery) {
+function buildPatientCreateData(group: GroupedImportDelivery) {
   return {
     documentId: group.documentId,
     documentType: 'CC',
@@ -242,7 +138,7 @@ function buildPatientUpdateIfEmpty(
     city: string | null;
     neighborhood: string | null;
   },
-  group: GroupedDelivery
+  group: GroupedImportDelivery
 ): Prisma.PatientUpdateInput {
   const data: Prisma.PatientUpdateInput = {};
 
@@ -268,6 +164,16 @@ function buildPatientUpdateIfEmpty(
   return data;
 }
 
+function parseExcelSheet(sheet: XLSX.WorkSheet): ExcelRow[] {
+  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    raw: false,
+    defval: '',
+  });
+  const mapped = rawRows.map(mapRawExcelRow);
+  const filled = fillDownImportRows(mapped);
+  return sortImportRows(filled);
+}
+
 export const DELIVERY_IMPORT_COLUMNS = [
   'Cedula',
   'NroDispensacion',
@@ -283,24 +189,40 @@ export const DELIVERY_IMPORT_COLUMNS = [
   'FechaPendiente',
 ] as const;
 
-const DELIVERY_TEMPLATE_EXAMPLE = {
-  Cedula: '1234567890',
-  NroDispensacion: 'DISP-001234',
-  Nombre: 'Juan Carlos Pérez García',
-  Telefono: '3001234567',
-  Telefono2: '3109876543',
-  Telefono3: '',
-  Direccion: 'Calle 10 #20-30 Barrio Centro',
-  CodigoMedicamento: 'CUM123456',
-  Medicamento: 'Acetaminofén 500 mg',
-  Cantidad: 2,
-  Prioridad: 'MEDIA',
-  FechaPendiente: '2026-06-08',
-};
+const DELIVERY_TEMPLATE_EXAMPLES = [
+  {
+    Cedula: '1234567890',
+    NroDispensacion: 'DISP-001234',
+    Nombre: 'Juan Carlos Pérez García',
+    Telefono: '3001234567',
+    Telefono2: '3109876543',
+    Telefono3: '',
+    Direccion: 'Calle 10 #20-30 Barrio Centro',
+    CodigoMedicamento: 'CUM123456',
+    Medicamento: 'Acetaminofén 500 mg',
+    Cantidad: 2,
+    Prioridad: 'MEDIA',
+    FechaPendiente: '2026-06-08',
+  },
+  {
+    Cedula: '',
+    NroDispensacion: '',
+    Nombre: '',
+    Telefono: '',
+    Telefono2: '',
+    Telefono3: '',
+    Direccion: '',
+    CodigoMedicamento: 'CUM789012',
+    Medicamento: 'Ibuprofeno 400 mg',
+    Cantidad: 1,
+    Prioridad: '',
+    FechaPendiente: '',
+  },
+];
 
 export class ExcelImportService {
   generateTemplateBuffer(): Buffer {
-    const ws = XLSX.utils.json_to_sheet([DELIVERY_TEMPLATE_EXAMPLE], {
+    const ws = XLSX.utils.json_to_sheet(DELIVERY_TEMPLATE_EXAMPLES, {
       header: [...DELIVERY_IMPORT_COLUMNS],
     });
     const wb = XLSX.utils.book_new();
@@ -310,7 +232,14 @@ export class ExcelImportService {
       ['Instrucciones'],
       ['Nombre', 'Nombre completo del paciente (un solo campo)'],
       ['Telefono / Telefono2 / Telefono3', 'Hasta 3 teléfonos. También puede separar con / en Telefono'],
-      ['CodigoMedicamento', 'Código único por medicamento — varias filas con misma cédula y dispensación pero distinto código = varios medicamentos en la misma entrega'],
+      [
+        'CodigoMedicamento',
+        'Una fila por medicamento. Misma cédula + misma dispensación + distinto código = varios medicamentos en la misma entrega',
+      ],
+      [
+        'Celdas combinadas',
+        'Si deja vacía cédula/dispensación en filas siguientes (mismo paciente), el sistema las completa automáticamente',
+      ],
       ['Lote', 'No incluir — se registra al empacar en Preparar pendientes'],
       ['HoraEntrega', 'No incluir — se define en llamadas / gestión'],
     ]);
@@ -332,82 +261,19 @@ export class ExcelImportService {
     const buffer = await fs.readFile(filePath);
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<ExcelRow>(sheet, { raw: false, defval: '' });
-    const sortedRows = sortImportRows(rows);
+    const sortedRows = parseExcelSheet(sheet);
 
-    const errors: Array<{ row: number; error: string }> = [];
-    const grouped = new Map<string, GroupedDelivery>();
-
-    sortedRows.forEach((row, index) => {
-      const rowNum = index + 2;
-      try {
-        const documentId = getCell(row, 'Cedula', 'cedula');
-        const documentNumber = getDispensacionNumber(row);
-        const medicationCode =
-          getCell(row, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum');
-        const medicationName = getCell(row, 'Medicamento', 'medicamento');
-
-        if (!documentId) throw new ValidationError('Cedula is required');
-        if (!medicationCode && !medicationName) {
-          throw new ValidationError('Medication code or name is required');
-        }
-
-        const groupKey = generateHash(documentId, documentNumber || 'NONE');
-        const medKey = buildMedicationKey(medicationCode, medicationName);
-        const rowHash = buildDeliveryItemHash(
-          documentId,
-          documentNumber,
-          medicationCode,
-          medicationName
-        );
-
-        const quantityRaw = getCell(row, 'Cantidad', 'cantidad') || '1';
-        const quantity = Math.max(1, parseInt(String(quantityRaw), 10) || 1);
-
-        const item = {
-          medicationCode: medKey,
-          medicationName: medicationName || medicationCode,
-          quantity,
-          rowHash,
-        };
-
-        const { firstName, lastName } = parsePatientName(row);
-        const phones = parsePhones(row);
-
-        if (grouped.has(groupKey)) {
-          const existing = grouped.get(groupKey)!;
-          const dupItem = existing.items.find((i) => i.rowHash === rowHash);
-          if (dupItem) {
-            dupItem.quantity += quantity;
-          } else {
-            existing.items.push(item);
-          }
-        } else {
-          grouped.set(groupKey, {
-            documentId,
-            documentNumber,
-            firstName,
-            lastName,
-            phone: phones.phone,
-            phoneAlt: phones.phoneAlt,
-            phoneFamily: phones.phoneFamily,
-            phoneAlternative: phones.phoneAlternative,
-            address: getCell(row, 'Direccion', 'direccion') || 'Sin dirección',
-            city: getCell(row, 'Ciudad', 'ciudad') || undefined,
-            neighborhood: getCell(row, 'Barrio', 'barrio') || undefined,
-            priority: parsePriority(getCell(row, 'Prioridad', 'prioridad') || 'MEDIA'),
-            pendingGeneratedAt: parsePendingGeneratedDate(row),
-            observations: getCell(row, 'Observaciones', 'observaciones') || undefined,
-            items: [item],
-            groupHash: groupKey,
-          });
-        }
-      } catch (err) {
-        errors.push({
-          row: rowNum,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
-      }
+    const { grouped, errors } = groupImportRows(sortedRows, {
+      generateHash,
+      parsePatientName,
+      parsePhones,
+      parsePriority,
+      parsePendingGeneratedDate,
+      getAddress: (row) => getCell(row, 'Direccion', 'direccion') || 'Sin dirección',
+      getCity: (row) => getCell(row, 'Ciudad', 'ciudad') || undefined,
+      getNeighborhood: (row) => getCell(row, 'Barrio', 'barrio') || undefined,
+      getObservations: (row) => getCell(row, 'Observaciones', 'observaciones') || undefined,
+      getPriorityRaw: (row) => getCell(row, 'Prioridad', 'prioridad'),
     });
 
     let insertedCount = 0;
@@ -478,6 +344,8 @@ export class ExcelImportService {
             insertedCount++;
           }
 
+          const importedItemHashes = new Set(group.items.map((i) => i.rowHash));
+
           for (const item of group.items) {
             let medication = await tx.medication.findFirst({
               where: { code: item.medicationCode, deletedAt: null },
@@ -491,6 +359,11 @@ export class ExcelImportService {
                   cum: item.medicationCode.length >= 6 ? item.medicationCode : undefined,
                 },
               });
+            } else if (medication.name !== item.medicationName) {
+              await tx.medication.update({
+                where: { id: medication.id },
+                data: { name: item.medicationName },
+              });
             }
 
             const existingItem = await tx.deliveryItem.findFirst({
@@ -498,10 +371,17 @@ export class ExcelImportService {
             });
 
             if (existingItem) {
-              await tx.deliveryItem.update({
-                where: { id: existingItem.id },
-                data: { quantity: item.quantity },
-              });
+              if (existingItem.deliveryId !== delivery.id) {
+                await tx.deliveryItem.update({
+                  where: { id: existingItem.id },
+                  data: { deliveryId: delivery.id, quantity: item.quantity },
+                });
+              } else {
+                await tx.deliveryItem.update({
+                  where: { id: existingItem.id },
+                  data: { quantity: item.quantity },
+                });
+              }
             } else {
               await tx.deliveryItem.create({
                 data: {
@@ -513,18 +393,33 @@ export class ExcelImportService {
               });
             }
           }
+
+          // Líneas que ya no vienen en el Excel se marcan eliminadas (reimportación limpia por dispensación)
+          await tx.deliveryItem.updateMany({
+            where: {
+              deliveryId: delivery.id,
+              deletedAt: null,
+              uniqueHash: { notIn: [...importedItemHashes] },
+            },
+            data: { deletedAt: new Date() },
+          });
         }
       });
     }
 
-    const status = errors.length > 0 && insertedCount + updatedCount === 0 ? 'FAILED' : errors.length > 0 ? 'PARTIAL' : 'COMPLETED';
+    const status =
+      errors.length > 0 && insertedCount + updatedCount === 0
+        ? 'FAILED'
+        : errors.length > 0
+          ? 'PARTIAL'
+          : 'COMPLETED';
 
     await prisma.excelImport.update({
       where: { id: importId },
       data: {
         status,
-        totalRows: rows.length,
-        processedRows: rows.length,
+        totalRows: sortedRows.length,
+        processedRows: sortedRows.length,
         insertedCount,
         updatedCount,
         errorCount: errors.length,
@@ -533,7 +428,13 @@ export class ExcelImportService {
       },
     });
 
-    logger.info('Excel import completed', { importId, insertedCount, updatedCount, errors: errors.length });
+    logger.info('Excel import completed', {
+      importId,
+      insertedCount,
+      updatedCount,
+      errors: errors.length,
+      groups: grouped.size,
+    });
   }
 
   async createImport(userId: string, fileName: string, filePath: string) {

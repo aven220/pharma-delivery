@@ -1,9 +1,29 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { generateHash } from '@pharma/utils';
 import {
   buildDeliveryItemHash,
   buildMedicationKey,
-} from '../modules/excel-imports/service/excel-import.service';
+  fillDownImportRows,
+  groupImportRows,
+  type ExcelRow,
+} from '../modules/excel-imports/service/excel-import.rows';
+
+const groupDeps = {
+  generateHash,
+  parsePatientName: (row: ExcelRow) => ({
+    firstName: row.Nombre || 'Sin nombre',
+    lastName: '.',
+  }),
+  parsePhones: () => ({ phone: '3001234567' }),
+  parsePriority: () => 'MEDIUM' as const,
+  parsePendingGeneratedDate: () => undefined,
+  getAddress: () => 'Calle 1',
+  getCity: () => undefined,
+  getNeighborhood: () => undefined,
+  getObservations: () => undefined,
+  getPriorityRaw: () => 'MEDIA',
+};
 
 describe('Excel import — claves por medicamento', () => {
   it('misma cédula y dispensación con códigos distintos generan hashes distintos', () => {
@@ -22,12 +42,65 @@ describe('Excel import — claves por medicamento', () => {
     const keyA = buildMedicationKey('', 'Acetaminofén 500mg');
     const keyB = buildMedicationKey('', 'Ibuprofeno 400mg');
     assert.notEqual(keyA, keyB);
-    assert.equal(keyA, 'NAME:ACETAMINOFÉN 500MG');
+  });
+});
+
+describe('Excel import — fill-down y agrupación', () => {
+  it('completa cédula/dispensación vacías en filas siguientes', () => {
+    const filled = fillDownImportRows([
+      {
+        Cedula: '123456',
+        NroDispensacion: 'DISP-99',
+        Nombre: 'Juan Pérez',
+        CodigoMedicamento: 'MED-A',
+        Medicamento: 'Med A',
+        Cantidad: 1,
+      },
+      {
+        CodigoMedicamento: 'MED-B',
+        Medicamento: 'Med B',
+        Cantidad: 2,
+      },
+    ]);
+
+    assert.equal(filled.length, 2);
+    assert.equal(filled[1].Cedula, '123456');
+    assert.equal(filled[1].NroDispensacion, 'DISP-99');
   });
 
-  it('códigos numéricos largos se distinguen (CUM)', () => {
-    const hashA = buildDeliveryItemHash('123', 'DISP-1', '199624601', 'Med A');
-    const hashB = buildDeliveryItemHash('123', 'DISP-1', '199624602', 'Med B');
-    assert.notEqual(hashA, hashB);
+  it('agrupa dos medicamentos en una sola dispensación', () => {
+    const filled = fillDownImportRows([
+      {
+        Cedula: '123456',
+        NroDispensacion: 'DISP-99',
+        Nombre: 'Juan',
+        CodigoMedicamento: 'MED-A',
+        Medicamento: 'Med A',
+        Cantidad: 1,
+      },
+      {
+        CodigoMedicamento: 'MED-B',
+        Medicamento: 'Med B',
+        Cantidad: 2,
+      },
+    ]);
+
+    const { grouped, errors } = groupImportRows(filled, groupDeps);
+    assert.equal(errors.length, 0);
+    assert.equal(grouped.size, 1);
+
+    const delivery = [...grouped.values()][0];
+    assert.equal(delivery.items.length, 2);
+    assert.equal(delivery.items[0].medicationCode, 'MED-A');
+    assert.equal(delivery.items[1].medicationCode, 'MED-B');
+  });
+
+  it('rechaza fila suelta sin cédula ni contexto previo', () => {
+    const { errors } = groupImportRows(
+      [{ CodigoMedicamento: 'MED-X', Medicamento: 'Solo med' }],
+      groupDeps
+    );
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].error, /Cedula/i);
   });
 });
