@@ -133,4 +133,46 @@ describe('Excel import — fill-down y agrupación', () => {
     assert.equal(delivery.items[0].quantity, 30);
     assert.equal(delivery.items[1].quantity, 20);
   });
+
+  it('agrupa formato COD_DISPENSA / COD_MEDICAMENTO (columnas con guión bajo)', () => {
+    const rows = [
+      mapRawExcelRow({
+        ID: 1,
+        COD_DISPENSA: 'DISP-2024-001',
+        FECHA: '2024-05-20',
+        CEDULA: '10203040',
+        NOMBRE_PACIENTE: 'JUAN ALBERTO RUIZ',
+        COD_MEDICAMENTO: 'MED-001',
+        NOMBRE_MEDICAMENTO: 'ACETAMINOFEN 500MG',
+        CANTIDAD: 30,
+        ESTADO: 'PENDIENTE',
+        PUNTO_ENTREGA: 'FARMACIA CENTRAL',
+        OBSERVACION: 'ENTREGA PRIORITARIA',
+      }),
+      mapRawExcelRow({
+        ID: 2,
+        COD_DISPENSA: 'DISP-2024-001',
+        FECHA: '2024-05-20',
+        CEDULA: '10203040',
+        NOMBRE_PACIENTE: 'JUAN ALBERTO RUIZ',
+        COD_MEDICAMENTO: 'MED-002',
+        NOMBRE_MEDICAMENTO: 'IBUPROFENO 400MG',
+        CANTIDAD: 20,
+        ESTADO: 'PENDIENTE',
+        PUNTO_ENTREGA: 'FARMACIA CENTRAL',
+        OBSERVACION: 'ENTREGA PRIORITARIA',
+      }),
+    ];
+
+    const { grouped, errors } = groupImportRows(rows, groupDeps);
+    assert.equal(errors.length, 0);
+    assert.equal(grouped.size, 1);
+    const delivery = [...grouped.values()][0];
+    assert.equal(delivery.documentNumber, 'DISP-2024-001');
+    assert.equal(delivery.items.length, 2);
+    assert.deepEqual(
+      delivery.items.map((i) => i.medicationCode).sort(),
+      ['MED-001', 'MED-002']
+    );
+  });
 });

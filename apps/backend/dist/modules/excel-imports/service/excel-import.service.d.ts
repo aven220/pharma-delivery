@@ -1,5 +1,8 @@
 import { Prisma } from '@prisma/client';
+export { buildDeliveryItemHash, buildMedicationKey, } from './excel-import.rows';
+export declare const DELIVERY_IMPORT_COLUMNS: readonly ["Cedula", "NroDispensacion", "Nombre", "Telefono", "Telefono2", "Telefono3", "Direccion", "CodigoMedicamento", "Medicamento", "Cantidad", "Prioridad", "FechaPendiente"];
 export declare class ExcelImportService {
+    generateTemplateBuffer(): Buffer;
     processImport(importId: string): Promise<void>;
     createImport(userId: string, fileName: string, filePath: string): Promise<{
         status: import(".prisma/client").$Enums.ExcelImportStatus;

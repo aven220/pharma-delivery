@@ -59,6 +59,10 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   nodisp: 'NroDispensacion',
   dispensacion: 'NroDispensacion',
   nodispensacion: 'NroDispensacion',
+  coddispensa: 'NroDispensacion',
+  codigodispensa: 'NroDispensacion',
+  coddisp: 'NroDispensacion',
+  nrodisp: 'NroDispensacion',
   nrodocumento: 'NroDocumento',
   nombre: 'Nombre',
   nombrecompleto: 'Nombre',
@@ -90,9 +94,12 @@ const HEADER_ALIASES: Record<string, keyof ExcelRow> = {
   prioridad: 'Prioridad',
   fechapendiente: 'FechaPendiente',
   fechadispensacion: 'FechaPendiente',
+  fecha: 'FechaPendiente',
   fechaentrega: 'FechaEntrega',
   observaciones: 'Observaciones',
+  observacion: 'Observaciones',
   nombrepunto: 'Observaciones',
+  puntoentrega: 'Observaciones',
 };
 
 export function normalizeExcelCell(val: unknown): string {
@@ -210,9 +217,12 @@ export function parseExcelSheetMatrix(matrix: unknown[][]): ExcelRow[] {
       ['cedula', 'nombrepaciente', 'nombrecompleto', 'numeroidentificacion'].includes(k)
     );
     const hasMed = keys.some((k) =>
-      ['codigomedicamento', 'nombremedicamento', 'cum', 'codigocum'].includes(k)
+      ['codigomedicamento', 'nombremedicamento', 'codmedicamento', 'cum', 'codigocum'].includes(k)
     );
-    if (hasPatient && hasMed) {
+    const hasDisp = keys.some((k) =>
+      ['nrodispensacion', 'coddispensa', 'codigodispensa', 'dispensacion'].includes(k)
+    );
+    if (hasPatient && (hasMed || hasDisp)) {
       headerRowIdx = i;
       break;
     }

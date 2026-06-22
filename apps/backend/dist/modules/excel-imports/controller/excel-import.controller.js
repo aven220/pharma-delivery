@@ -48,6 +48,17 @@ class ExcelImportController {
             next(error);
         }
     }
+    async downloadTemplate(_req, res, next) {
+        try {
+            const buffer = excel_import_service_1.excelImportService.generateTemplateBuffer();
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', 'attachment; filename="plantilla-entregas-pendientes.xlsx"');
+            res.send(buffer);
+        }
+        catch (error) {
+            next(error);
+        }
+    }
     async list(req, res, next) {
         try {
             const page = Number(req.query.page) || 1;

@@ -108,10 +108,11 @@ function DeliveriesImportTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Acepta su plantilla con: Cedula, NombrePaciente, NroDispensacion, FechaDispensacion,
-              CodigoMedicamento, NombreMedicamento, CantidadEntregada, Ciudad (y columnas equivalentes).
-              Varias filas con la misma cédula y mismo NroDispensacion pero distinto CodigoMedicamento
-              se agrupan en una sola entrega con varios medicamentos.
+              Acepta su plantilla con columnas como: Cedula/CEDULA, NombrePaciente/NOMBRE_PACIENTE,
+              NroDispensacion/COD_DISPENSA, CodigoMedicamento/COD_MEDICAMENTO,
+              NombreMedicamento/NOMBRE_MEDICAMENTO, Cantidad/CANTIDAD (y equivalentes).
+              Varias filas con la misma cédula y mismo número de dispensación pero distinto código
+              de medicamento se agrupan en una sola entrega con varios medicamentos.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button

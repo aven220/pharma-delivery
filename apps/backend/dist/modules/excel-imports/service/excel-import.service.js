@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.excelImportService = exports.ExcelImportService = void 0;
+exports.excelImportService = exports.ExcelImportService = exports.DELIVERY_IMPORT_COLUMNS = exports.buildMedicationKey = exports.buildDeliveryItemHash = void 0;
 const XLSX = __importStar(require("xlsx"));
 const promises_1 = __importDefault(require("fs/promises"));
 const path_1 = __importDefault(require("path"));
@@ -45,15 +45,57 @@ const env_1 = require("../../../config/env");
 const utils_1 = require("@pharma/utils");
 const logger_1 = require("../../../config/logger");
 const AppError_1 = require("../../../shared/errors/AppError");
+const delivery_status_service_1 = require("../../deliveries/service/delivery-status.service");
 const client_1 = require("@prisma/client");
-function getCell(row, ...keys) {
-    for (const key of keys) {
-        const val = row[key];
-        if (val !== undefined && val !== null && String(val).trim()) {
-            return String(val).trim();
-        }
+const excel_import_rows_1 = require("./excel-import.rows");
+var excel_import_rows_2 = require("./excel-import.rows");
+Object.defineProperty(exports, "buildDeliveryItemHash", { enumerable: true, get: function () { return excel_import_rows_2.buildDeliveryItemHash; } });
+Object.defineProperty(exports, "buildMedicationKey", { enumerable: true, get: function () { return excel_import_rows_2.buildMedicationKey; } });
+function parsePatientName(row) {
+    const fullName = (0, excel_import_rows_1.getCell)(row, 'Nombre', 'nombre');
+    const legacyLast = (0, excel_import_rows_1.getCell)(row, 'Apellido', 'apellido');
+    if (legacyLast && !fullName.includes(' ')) {
+        return { firstName: fullName || legacyLast, lastName: legacyLast };
     }
-    return '';
+    if (!fullName)
+        return { firstName: 'Sin nombre', lastName: '.' };
+    return { firstName: fullName, lastName: '.' };
+}
+function parsePhones(row) {
+    const rawMain = (0, excel_import_rows_1.getCell)(row, 'Telefono', 'telefono');
+    const splitFromMain = rawMain
+        .split(/[/;,|]/)
+        .map((p) => (0, utils_1.sanitizePhone)(p.trim()))
+        .filter(Boolean);
+    const phone = splitFromMain[0] || (0, utils_1.sanitizePhone)(rawMain) || '';
+    const col2 = (0, utils_1.sanitizePhone)((0, excel_import_rows_1.getCell)(row, 'Telefono2', 'telefono2', 'TelefonoAlt', 'telefonoAlt'));
+    const col3 = (0, utils_1.sanitizePhone)((0, excel_import_rows_1.getCell)(row, 'Telefono3', 'telefono3'));
+    return {
+        phone,
+        phoneAlt: splitFromMain[1] || col2 || undefined,
+        phoneFamily: splitFromMain[2] || col3 || undefined,
+        phoneAlternative: splitFromMain[3] || undefined,
+    };
+}
+function parsePendingGeneratedDate(row) {
+    return parseExcelDate(row.FechaPendiente ?? row.fechaPendiente ?? row.FechaEntrega ?? row.fechaEntrega);
+}
+function sortImportRows(rows) {
+    return [...rows].sort((a, b) => {
+        const cedulaA = (0, excel_import_rows_1.getCell)(a, 'Cedula', 'cedula');
+        const cedulaB = (0, excel_import_rows_1.getCell)(b, 'Cedula', 'cedula');
+        if (cedulaA !== cedulaB)
+            return cedulaA.localeCompare(cedulaB, 'es', { numeric: true });
+        const docA = (0, excel_import_rows_1.getDispensacionNumber)(a) || 'NONE';
+        const docB = (0, excel_import_rows_1.getDispensacionNumber)(b) || 'NONE';
+        if (docA !== docB)
+            return docA.localeCompare(docB, 'es', { numeric: true });
+        const medA = (0, excel_import_rows_1.getCell)(a, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum') ||
+            (0, excel_import_rows_1.getCell)(a, 'Medicamento', 'medicamento');
+        const medB = (0, excel_import_rows_1.getCell)(b, 'CodigoMedicamento', 'codigoMedicamento', 'CUM', 'cum') ||
+            (0, excel_import_rows_1.getCell)(b, 'Medicamento', 'medicamento');
+        return medA.localeCompare(medB, 'es', { numeric: true });
+    });
 }
 function parsePriority(value) {
     const map = {
@@ -78,7 +120,115 @@ function parseExcelDate(value) {
     const parsed = new Date(value);
     return isNaN(parsed.getTime()) ? undefined : parsed;
 }
+function buildPatientCreateData(group) {
+    return {
+        documentId: group.documentId,
+        documentType: 'CC',
+        firstName: group.firstName,
+        lastName: group.lastName,
+        phone: group.phone || null,
+        phoneAlt: group.phoneAlt || null,
+        phoneFamily: group.phoneFamily || null,
+        phoneAlternative: group.phoneAlternative || null,
+        address: group.address,
+        city: group.city,
+        neighborhood: group.neighborhood,
+        uniqueHash: (0, utils_1.generateHash)(group.documentId, 'CC'),
+    };
+}
+function buildPatientUpdateIfEmpty(patient, group) {
+    const data = {};
+    if ((patient.lastName === '.' || patient.firstName === 'Sin nombre') &&
+        group.firstName !== 'Sin nombre') {
+        data.firstName = group.firstName;
+        data.lastName = group.lastName;
+    }
+    if (!patient.phone && group.phone)
+        data.phone = group.phone;
+    if (!patient.phoneAlt && group.phoneAlt)
+        data.phoneAlt = group.phoneAlt;
+    if (!patient.phoneFamily && group.phoneFamily)
+        data.phoneFamily = group.phoneFamily;
+    if (!patient.phoneAlternative && group.phoneAlternative) {
+        data.phoneAlternative = group.phoneAlternative;
+    }
+    if ((!patient.address || patient.address === 'Sin dirección') && group.address) {
+        data.address = group.address;
+    }
+    if (!patient.city && group.city)
+        data.city = group.city;
+    if (!patient.neighborhood && group.neighborhood)
+        data.neighborhood = group.neighborhood;
+    return data;
+}
+function parseExcelSheet(sheet) {
+    const matrix = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        defval: '',
+        raw: false,
+    });
+    const mapped = (0, excel_import_rows_1.parseExcelSheetMatrix)(matrix);
+    return sortImportRows((0, excel_import_rows_1.fillDownImportRows)(mapped));
+}
+exports.DELIVERY_IMPORT_COLUMNS = [
+    'Cedula',
+    'NroDispensacion',
+    'Nombre',
+    'Telefono',
+    'Telefono2',
+    'Telefono3',
+    'Direccion',
+    'CodigoMedicamento',
+    'Medicamento',
+    'Cantidad',
+    'Prioridad',
+    'FechaPendiente',
+];
+const DELIVERY_TEMPLATE_EXAMPLES = [
+    {
+        Cedula: '1010091313',
+        NombrePaciente: 'MARTHA CECILIA SOTO',
+        NroDispensacion: '10020',
+        FechaDispensacion: '2024-05-15',
+        CodigoMedicamento: '7702133010113',
+        NombreMedicamento: 'ACETAMINOFEN 500 MG TABLETA',
+        CantidadEntregada: 30,
+        Ciudad: 'BOGOTA',
+    },
+    {
+        Cedula: '1010091313',
+        NombrePaciente: 'MARTHA CECILIA SOTO',
+        NroDispensacion: '10020',
+        FechaDispensacion: '2024-05-15',
+        CodigoMedicamento: '7702133010114',
+        NombreMedicamento: 'IBUPROFENO 400 MG TABLETA',
+        CantidadEntregada: 20,
+        Ciudad: 'BOGOTA',
+    },
+];
 class ExcelImportService {
+    generateTemplateBuffer() {
+        const ws = XLSX.utils.json_to_sheet(DELIVERY_TEMPLATE_EXAMPLES);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Entregas pendientes');
+        const instructions = XLSX.utils.aoa_to_sheet([
+            ['Instrucciones'],
+            ['Nombre', 'Nombre completo del paciente (un solo campo)'],
+            ['Telefono / Telefono2 / Telefono3', 'Hasta 3 teléfonos. También puede separar con / en Telefono'],
+            [
+                'CodigoMedicamento',
+                'Una fila por medicamento. Misma cédula + misma dispensación + distinto código = varios medicamentos en la misma entrega',
+            ],
+            [
+                'Celdas combinadas',
+                'Si deja vacía cédula/dispensación en filas siguientes (mismo paciente), el sistema las completa automáticamente',
+            ],
+            ['Lote', 'No incluir — se registra al empacar en Preparar pendientes'],
+            ['HoraEntrega', 'No incluir — se define en llamadas / gestión'],
+        ]);
+        XLSX.utils.book_append_sheet(wb, instructions, 'Instrucciones');
+        return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    }
     async processImport(importId) {
         const importRecord = await prisma_1.prisma.excelImport.findUnique({ where: { id: importId } });
         if (!importRecord)
@@ -91,64 +241,18 @@ class ExcelImportService {
         const buffer = await promises_1.default.readFile(filePath);
         const workbook = XLSX.read(buffer, { type: 'buffer' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-        const errors = [];
-        const grouped = new Map();
-        rows.forEach((row, index) => {
-            const rowNum = index + 2;
-            try {
-                const documentId = getCell(row, 'Cedula', 'cedula');
-                const documentNumber = getCell(row, 'NroDocumento', 'nroDocumento');
-                const medicationCode = getCell(row, 'CodigoMedicamento', 'codigoMedicamento');
-                const medicationName = getCell(row, 'Medicamento', 'medicamento');
-                if (!documentId)
-                    throw new AppError_1.ValidationError('Cedula is required');
-                if (!medicationCode && !medicationName) {
-                    throw new AppError_1.ValidationError('Medication code or name is required');
-                }
-                const groupKey = (0, utils_1.generateHash)(documentId, documentNumber || 'NONE');
-                const rowHash = (0, utils_1.generateHash)(documentId, documentNumber, medicationCode || medicationName, getCell(row, 'Lote', 'lote'), String(getCell(row, 'Cantidad', 'cantidad') || '1'));
-                const quantityRaw = getCell(row, 'Cantidad', 'cantidad') || '1';
-                const quantity = Math.max(1, parseInt(String(quantityRaw), 10) || 1);
-                const item = {
-                    medicationCode: medicationCode || (0, utils_1.generateHash)(medicationName).slice(0, 8).toUpperCase(),
-                    medicationName: medicationName || medicationCode,
-                    quantity,
-                    lotNumber: getCell(row, 'Lote', 'lote') || undefined,
-                    rowHash,
-                };
-                if (grouped.has(groupKey)) {
-                    const existing = grouped.get(groupKey);
-                    const dupItem = existing.items.find((i) => i.rowHash === rowHash);
-                    if (!dupItem)
-                        existing.items.push(item);
-                }
-                else {
-                    const nameParts = getCell(row, 'Nombre', 'nombre').split(' ');
-                    grouped.set(groupKey, {
-                        documentId,
-                        documentNumber,
-                        firstName: getCell(row, 'Nombre', 'nombre') || nameParts[0] || 'N/A',
-                        lastName: getCell(row, 'Apellido', 'apellido') || nameParts.slice(1).join(' ') || 'N/A',
-                        phone: (0, utils_1.sanitizePhone)(getCell(row, 'Telefono', 'telefono')),
-                        address: getCell(row, 'Direccion', 'direccion') || 'Sin dirección',
-                        city: getCell(row, 'Ciudad', 'ciudad') || undefined,
-                        neighborhood: getCell(row, 'Barrio', 'barrio') || undefined,
-                        priority: parsePriority(getCell(row, 'Prioridad', 'prioridad') || 'MEDIA'),
-                        scheduledDate: parseExcelDate(row.FechaEntrega ?? row.fechaEntrega),
-                        scheduledTime: getCell(row, 'HoraEntrega', 'horaEntrega') || undefined,
-                        observations: getCell(row, 'Observaciones', 'observaciones') || undefined,
-                        items: [item],
-                        groupHash: groupKey,
-                    });
-                }
-            }
-            catch (err) {
-                errors.push({
-                    row: rowNum,
-                    error: err instanceof Error ? err.message : 'Unknown error',
-                });
-            }
+        const sortedRows = parseExcelSheet(sheet);
+        const { grouped, errors } = (0, excel_import_rows_1.groupImportRows)(sortedRows, {
+            generateHash: utils_1.generateHash,
+            parsePatientName,
+            parsePhones,
+            parsePriority,
+            parsePendingGeneratedDate,
+            getAddress: (row) => (0, excel_import_rows_1.getCell)(row, 'Direccion', 'direccion') || 'Sin dirección',
+            getCity: (row) => (0, excel_import_rows_1.getCell)(row, 'Ciudad', 'ciudad') || undefined,
+            getNeighborhood: (row) => (0, excel_import_rows_1.getCell)(row, 'Barrio', 'barrio') || undefined,
+            getObservations: (row) => (0, excel_import_rows_1.getCell)(row, 'Observaciones', 'observaciones') || undefined,
+            getPriorityRaw: (row) => (0, excel_import_rows_1.getCell)(row, 'Prioridad', 'prioridad'),
         });
         let insertedCount = 0;
         let updatedCount = 0;
@@ -161,31 +265,17 @@ class ExcelImportService {
                         where: { uniqueHash: patientHash, deletedAt: null },
                     });
                     if (patient) {
-                        patient = await tx.patient.update({
-                            where: { id: patient.id },
-                            data: {
-                                firstName: group.firstName,
-                                lastName: group.lastName,
-                                phone: group.phone || patient.phone,
-                                address: group.address,
-                                city: group.city,
-                                neighborhood: group.neighborhood,
-                            },
-                        });
+                        const updateData = buildPatientUpdateIfEmpty(patient, group);
+                        if (Object.keys(updateData).length > 0) {
+                            patient = await tx.patient.update({
+                                where: { id: patient.id },
+                                data: updateData,
+                            });
+                        }
                     }
                     else {
                         patient = await tx.patient.create({
-                            data: {
-                                documentId: group.documentId,
-                                documentType: 'CC',
-                                firstName: group.firstName,
-                                lastName: group.lastName,
-                                phone: group.phone || null,
-                                address: group.address,
-                                city: group.city,
-                                neighborhood: group.neighborhood,
-                                uniqueHash: patientHash,
-                            },
+                            data: buildPatientCreateData(group),
                         });
                     }
                     const deliveryHash = group.groupHash;
@@ -197,9 +287,8 @@ class ExcelImportService {
                             where: { id: delivery.id },
                             data: {
                                 priority: group.priority,
-                                scheduledDate: group.scheduledDate,
-                                scheduledTime: group.scheduledTime,
-                                observations: group.observations,
+                                pendingGeneratedAt: group.pendingGeneratedAt ?? delivery.pendingGeneratedAt,
+                                observations: group.observations ?? delivery.observations,
                                 documentNumber: group.documentNumber,
                                 excelImportId: importId,
                             },
@@ -213,16 +302,24 @@ class ExcelImportService {
                                 documentNumber: group.documentNumber,
                                 patientId: patient.id,
                                 priority: group.priority,
-                                scheduledDate: group.scheduledDate,
-                                scheduledTime: group.scheduledTime,
+                                pendingGeneratedAt: group.pendingGeneratedAt ?? new Date(),
                                 observations: group.observations,
                                 uniqueHash: deliveryHash,
                                 excelImportId: importId,
-                                status: 'PENDING_CALL',
+                                status: 'LIBRE',
                             },
+                        });
+                        await delivery_status_service_1.deliveryStatusService.logStatusChange(tx, {
+                            deliveryId: delivery.id,
+                            fromStatus: null,
+                            toStatus: 'LIBRE',
+                            action: 'IMPORT_CREATED',
+                            changedById: importRecord.importedById,
+                            observations: `Importación ${importRecord.fileName}`,
                         });
                         insertedCount++;
                     }
+                    const importedItemHashes = new Set(group.items.map((i) => i.rowHash));
                     for (const item of group.items) {
                         let medication = await tx.medication.findFirst({
                             where: { code: item.medicationCode, deletedAt: null },
@@ -232,17 +329,32 @@ class ExcelImportService {
                                 data: {
                                     code: item.medicationCode,
                                     name: item.medicationName,
+                                    cum: item.medicationCode.length >= 6 ? item.medicationCode : undefined,
                                 },
+                            });
+                        }
+                        else if (medication.name !== item.medicationName) {
+                            await tx.medication.update({
+                                where: { id: medication.id },
+                                data: { name: item.medicationName },
                             });
                         }
                         const existingItem = await tx.deliveryItem.findFirst({
                             where: { uniqueHash: item.rowHash, deletedAt: null },
                         });
                         if (existingItem) {
-                            await tx.deliveryItem.update({
-                                where: { id: existingItem.id },
-                                data: { quantity: item.quantity, lotNumber: item.lotNumber },
-                            });
+                            if (existingItem.deliveryId !== delivery.id) {
+                                await tx.deliveryItem.update({
+                                    where: { id: existingItem.id },
+                                    data: { deliveryId: delivery.id, quantity: item.quantity },
+                                });
+                            }
+                            else {
+                                await tx.deliveryItem.update({
+                                    where: { id: existingItem.id },
+                                    data: { quantity: item.quantity },
+                                });
+                            }
                         }
                         else {
                             await tx.deliveryItem.create({
@@ -250,22 +362,34 @@ class ExcelImportService {
                                     deliveryId: delivery.id,
                                     medicationId: medication.id,
                                     quantity: item.quantity,
-                                    lotNumber: item.lotNumber,
                                     uniqueHash: item.rowHash,
                                 },
                             });
                         }
                     }
+                    // Líneas que ya no vienen en el Excel se marcan eliminadas (reimportación limpia por dispensación)
+                    await tx.deliveryItem.updateMany({
+                        where: {
+                            deliveryId: delivery.id,
+                            deletedAt: null,
+                            uniqueHash: { notIn: [...importedItemHashes] },
+                        },
+                        data: { deletedAt: new Date() },
+                    });
                 }
             });
         }
-        const status = errors.length > 0 && insertedCount + updatedCount === 0 ? 'FAILED' : errors.length > 0 ? 'PARTIAL' : 'COMPLETED';
+        const status = errors.length > 0 && insertedCount + updatedCount === 0
+            ? 'FAILED'
+            : errors.length > 0
+                ? 'PARTIAL'
+                : 'COMPLETED';
         await prisma_1.prisma.excelImport.update({
             where: { id: importId },
             data: {
                 status,
-                totalRows: rows.length,
-                processedRows: rows.length,
+                totalRows: sortedRows.length,
+                processedRows: sortedRows.length,
                 insertedCount,
                 updatedCount,
                 errorCount: errors.length,
@@ -273,7 +397,19 @@ class ExcelImportService {
                 completedAt: new Date(),
             },
         });
-        logger_1.logger.info('Excel import completed', { importId, insertedCount, updatedCount, errors: errors.length });
+        logger_1.logger.info('Excel import completed', {
+            importId,
+            insertedCount,
+            updatedCount,
+            errors: errors.length,
+            groups: grouped.size,
+            itemsPerGroup: [...grouped.values()].map((g) => ({
+                dispensacion: g.documentNumber,
+                cedula: g.documentId,
+                items: g.items.length,
+                meds: g.items.map((i) => i.medicationCode),
+            })),
+        });
     }
     async createImport(userId, fileName, filePath) {
         return prisma_1.prisma.excelImport.create({
