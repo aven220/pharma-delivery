@@ -33,7 +33,7 @@ export function CallsHubPage() {
       <div>
         <h2 className="text-3xl font-bold">Llamadas</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Centro unificado: asignación de pendientes, gestión operativa e historial.
+          1) Asigne pendientes · 2) Opere en Mis llamadas (marcar → resultado → guardar) · 3) Revise historial y monitoreo.
         </p>
       </div>
 

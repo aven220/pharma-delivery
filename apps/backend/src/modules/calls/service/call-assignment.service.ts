@@ -291,6 +291,7 @@ export class CallAssignmentService {
       callTime?: string;
       durationSec?: number;
       phoneUsed?: string;
+      skipDialJustification?: string;
       patientUpdates?: Partial<{
         address: string;
         neighborhood: string;
@@ -325,6 +326,21 @@ export class CallAssignmentService {
 
     const auditUserId = options?.actingUserId ?? operatorUserId;
     const callOperatorUserId = assignment.operatorUserId;
+
+    const isComplete =
+      input.managementResult !== undefined ||
+      input.action !== undefined ||
+      input.status === 'CONFIRMED' ||
+      ['WRONG_NUMBER', 'OFF'].includes(input.status || '');
+
+    if (isComplete && !assignment.dialClickedAt && assignment.dialClickCount === 0) {
+      const justification = input.skipDialJustification?.trim();
+      if (!justification || justification.length < 10) {
+        throw new ValidationError(
+          'Debe pulsar "Llamar ahora" antes de guardar, o escriba una justificación (mín. 10 caracteres) si no pudo marcar.'
+        );
+      }
+    }
 
     return prisma.$transaction(async (tx) => {
       if (input.patientUpdates) {
@@ -494,18 +510,19 @@ export class CallAssignmentService {
         await tx.delivery.update({ where: { id: assignment.deliveryId }, data: { status: 'PENDING_CALL' } });
       }
 
-      const isComplete =
-        input.managementResult !== undefined ||
-        input.action !== undefined ||
-        input.status === 'CONFIRMED' ||
-        ['WRONG_NUMBER', 'OFF'].includes(input.status || '');
+      const obsWithDialNote =
+        !assignment.dialClickedAt &&
+        assignment.dialClickCount === 0 &&
+        input.skipDialJustification?.trim()
+          ? `${input.observations ? `${input.observations}\n` : ''}[Sin marcar] ${input.skipDialJustification.trim()}`
+          : input.observations;
 
       const updated = await tx.callAssignment.update({
         where: { id: assignmentId },
         data: {
           ...(input.status && { status: input.status }),
           ...(input.managementResult && { managementResult: input.managementResult }),
-          ...(input.observations !== undefined && { observations: input.observations }),
+          ...(obsWithDialNote !== undefined && { observations: obsWithDialNote }),
           ...(input.callDate && { callDate: new Date(input.callDate) }),
           ...(input.callTime && { callTime: input.callTime }),
           ...(input.durationSec !== undefined && { durationSec: input.durationSec }),
@@ -519,6 +536,155 @@ export class CallAssignmentService {
 
       return updated;
     });
+  }
+
+  async registerDialClick(
+    assignmentId: string,
+    operatorUserId: string,
+    phone?: string,
+    options?: { bypassOperatorCheck?: boolean }
+  ) {
+    const assignment = await prisma.callAssignment.findFirst({
+      where: {
+        id: assignmentId,
+        deletedAt: null,
+        ...(options?.bypassOperatorCheck ? {} : { operatorUserId }),
+      },
+      include: { delivery: { include: { patient: true } } },
+    });
+    if (!assignment) throw new NotFoundError('Call assignment');
+    assertDeliveryCallable(assignment.delivery.status);
+
+    const phoneUsed =
+      phone?.trim() ||
+      assignment.phoneUsed ||
+      assignment.delivery.patient.phone ||
+      assignment.delivery.patient.phoneAlt ||
+      'unknown';
+
+    return prisma.callAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        dialClickedAt: assignment.dialClickedAt ?? new Date(),
+        dialClickCount: { increment: 1 },
+        phoneUsed,
+        callDate: assignment.callDate ?? new Date(),
+        callTime:
+          assignment.callTime ??
+          new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      },
+    });
+  }
+
+  async getOperatorMonitoring(dateFrom?: Date, dateTo?: Date) {
+    const start =
+      dateFrom ??
+      (() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+      })();
+    const end = dateTo ?? new Date();
+
+    const completed = await prisma.callAssignment.findMany({
+      where: {
+        deletedAt: null,
+        completedAt: { gte: start, lte: end },
+      },
+      select: {
+        id: true,
+        operatorUserId: true,
+        dialClickedAt: true,
+        dialClickCount: true,
+        durationSec: true,
+        managementResult: true,
+        completedAt: true,
+        observations: true,
+        operator: { select: { firstName: true, lastName: true } },
+      },
+    });
+
+    type Agg = {
+      operatorId: string;
+      name: string;
+      total: number;
+      withDial: number;
+      withoutDial: number;
+      shortDuration: number;
+      avgDurationSec: number;
+      alertLevel: 'green' | 'yellow' | 'red';
+      durationSum: number;
+      durationCount: number;
+    };
+
+    const byOp = new Map<string, Agg>();
+
+    for (const row of completed) {
+      const key = row.operatorUserId;
+      let agg = byOp.get(key);
+      if (!agg) {
+        agg = {
+          operatorId: key,
+          name: `${row.operator.firstName} ${row.operator.lastName}`,
+          total: 0,
+          withDial: 0,
+          withoutDial: 0,
+          shortDuration: 0,
+          avgDurationSec: 0,
+          alertLevel: 'green',
+          durationSum: 0,
+          durationCount: 0,
+        };
+        byOp.set(key, agg);
+      }
+      agg.total += 1;
+      const dialed = !!(row.dialClickedAt || row.dialClickCount > 0);
+      if (dialed) agg.withDial += 1;
+      else agg.withoutDial += 1;
+      if (typeof row.durationSec === 'number') {
+        agg.durationSum += row.durationSec;
+        agg.durationCount += 1;
+        if (row.durationSec < 5 && row.managementResult === 'CONFIRMED_FOR_DELIVERY') {
+          agg.shortDuration += 1;
+        }
+      }
+    }
+
+    const operators = Array.from(byOp.values()).map((agg) => {
+      const avgDurationSec =
+        agg.durationCount > 0 ? Math.round(agg.durationSum / agg.durationCount) : 0;
+      const noDialPct = agg.total > 0 ? agg.withoutDial / agg.total : 0;
+      let alertLevel: 'green' | 'yellow' | 'red' = 'green';
+      if (noDialPct >= 0.4 || agg.shortDuration >= 3) alertLevel = 'red';
+      else if (noDialPct >= 0.15 || agg.shortDuration >= 1) alertLevel = 'yellow';
+      return {
+        operatorId: agg.operatorId,
+        name: agg.name,
+        total: agg.total,
+        withDial: agg.withDial,
+        withoutDial: agg.withoutDial,
+        dialRate: agg.total > 0 ? Math.round((agg.withDial / agg.total) * 100) : 0,
+        shortDuration: agg.shortDuration,
+        avgDurationSec,
+        alertLevel,
+      };
+    });
+
+    return {
+      dateFrom: start.toISOString(),
+      dateTo: end.toISOString(),
+      totalCompleted: completed.length,
+      alerts: {
+        withoutDial: completed.filter((c) => !c.dialClickedAt && c.dialClickCount === 0).length,
+        shortDuration: completed.filter(
+          (c) =>
+            typeof c.durationSec === 'number' &&
+            c.durationSec < 5 &&
+            c.managementResult === 'CONFIRMED_FOR_DELIVERY'
+        ).length,
+      },
+      operators: operators.sort((a, b) => b.total - a.total),
+    };
   }
 
   async getManagementStats(dateFrom?: Date, dateTo?: Date) {

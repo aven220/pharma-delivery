@@ -557,18 +557,50 @@ export class ReportsService {
       _count: true,
     });
 
+    const dialStats = await prisma.callAssignment.groupBy({
+      by: ['operatorUserId'],
+      where: {
+        deletedAt: null,
+        managementResult: { not: null },
+        ...(dateFilter && { completedAt: dateFilter }),
+      },
+      _count: true,
+      _avg: { durationSec: true },
+    });
+
+    const withDialByOp = await prisma.callAssignment.groupBy({
+      by: ['operatorUserId'],
+      where: {
+        deletedAt: null,
+        managementResult: { not: null },
+        dialClickCount: { gt: 0 },
+        ...(dateFilter && { completedAt: dateFilter }),
+      },
+      _count: true,
+    });
+
+    const dialMap = new Map(dialStats.map((d) => [d.operatorUserId, d]));
+    const withDialMap = new Map(withDialByOp.map((d) => [d.operatorUserId, d._count]));
+
     const result: Record<string, unknown>[] = [];
     for (const s of stats) {
       const user = await prisma.user.findUnique({
         where: { id: s.operatorUserId },
         select: { firstName: true, lastName: true, email: true },
       });
+      const dial = dialMap.get(s.operatorUserId);
+      const withDial = withDialMap.get(s.operatorUserId) ?? 0;
+      const totalOp = dial?._count ?? 0;
       result.push({
         operador: user ? `${user.firstName} ${user.lastName}` : s.operatorUserId,
         email: user?.email || '',
         resultado: label(CALL_MANAGEMENT_RESULT_LABELS, s.managementResult),
         codigoResultado: s.managementResult,
         cantidad: s._count,
+        gestionesOperador: totalOp,
+        conMarcar: withDial,
+        sinMarcar: Math.max(0, totalOp - withDial),
+        duracionPromedioSeg: dial?._avg.durationSec != null ? Math.round(dial._avg.durationSec) : null,
       });
     }
     return result;

@@ -40,6 +40,10 @@ interface CallAssignment {
   observations: string | null;
   callDate?: string | null;
   callTime?: string | null;
+  dialClickedAt?: string | null;
+  dialClickCount?: number;
+  durationSec?: number | null;
+  phoneUsed?: string | null;
   delivery: {
     id: string;
     deliveryNumber: string;
@@ -137,6 +141,7 @@ const EMPTY_FORM = {
   action: '',
   deactivationReason: '',
   pendingSubreason: '',
+  skipDialJustification: '',
 };
 
 function buildFormFromCall(call: CallAssignment) {
@@ -175,6 +180,9 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
   const [activeCategory, setActiveCategory] = useState<CallCategoryId>('pending');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [dialStartedAt, setDialStartedAt] = useState<number | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [hasDialed, setHasDialed] = useState(false);
 
   const { data: calls, isLoading, isFetching, refetch } = useQuery({
     queryKey: ['my-calls'],
@@ -233,14 +241,51 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
     setSelectedId(call.id);
     setForm(buildFormFromCall(call));
     setSaveMessage(null);
+    setDialStartedAt(null);
+    setElapsedSec(0);
+    setHasDialed(!!(call.dialClickedAt || (call.dialClickCount ?? 0) > 0));
   };
 
   useEffect(() => {
     if (filteredCalls.length > 0 && !selectedId) {
       setSelectedId(filteredCalls[0].id);
       setForm(buildFormFromCall(filteredCalls[0]));
+      setHasDialed(!!(filteredCalls[0].dialClickedAt || (filteredCalls[0].dialClickCount ?? 0) > 0));
     }
   }, [filteredCalls, selectedId]);
+
+  useEffect(() => {
+    if (!dialStartedAt) return;
+    const id = window.setInterval(() => {
+      const sec = Math.floor((Date.now() - dialStartedAt) / 1000);
+      setElapsedSec(sec);
+      setForm((f) => ({ ...f, durationSec: String(sec) }));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [dialStartedAt]);
+
+  const dialMutation = useMutation({
+    mutationFn: (phone: string) => callsApi.registerDial(selected!.id, phone),
+    onSuccess: (_res, phone) => {
+      setHasDialed(true);
+      setDialStartedAt(Date.now());
+      setForm((f) => ({
+        ...f,
+        phoneUsed: phone,
+        callDate: new Date().toISOString().slice(0, 10),
+        callTime: new Date().toTimeString().slice(0, 5),
+      }));
+      queryClient.invalidateQueries({ queryKey: ['my-calls'] });
+      toast.success('Marcación registrada. Cronómetro iniciado.');
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'No se pudo registrar la marcación')),
+  });
+
+  const handleDial = (phone: string) => {
+    if (!selected || isLocked) return;
+    window.location.href = `tel:${phone}`;
+    dialMutation.mutate(phone);
+  };
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -252,6 +297,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
         callTime: form.callTime || undefined,
         durationSec: form.durationSec ? Number(form.durationSec) : undefined,
         phoneUsed: form.phoneUsed || undefined,
+        skipDialJustification: form.skipDialJustification || undefined,
         rescheduleDate: form.rescheduleDate || undefined,
         rescheduleTime: form.rescheduleTime || undefined,
         action: form.action || undefined,
@@ -270,9 +316,12 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
       }),
     onSuccess: async () => {
       const savedId = selected!.id;
-      setSaveMessage('Gestión guardada correctamente');
+      setSaveMessage('Listo. Siguiente llamada');
       toast.success('Gestión guardada correctamente');
       setForm(EMPTY_FORM);
+      setDialStartedAt(null);
+      setElapsedSec(0);
+      setHasDialed(false);
 
       const fresh = await queryClient.fetchQuery({
         queryKey: ['my-calls'],
@@ -287,6 +336,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
       if (next) {
         setSelectedId(next.id);
         setForm(buildFormFromCall(next));
+        setHasDialed(!!(next.dialClickedAt || (next.dialClickCount ?? 0) > 0));
       } else {
         setSelectedId(null);
       }
@@ -318,8 +368,8 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
           <div>
             <h2 className="text-3xl font-bold">Mis Llamadas</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Cada fila es una <strong>entrega / orden</strong> (NroDocumento), no el paciente completo.
-              Un mismo paciente puede tener varias entregas activas a la vez.
+              Pasos: <strong>1. Abrir</strong> → <strong>2. Llamar</strong> → <strong>3. Resultado</strong> →{' '}
+              <strong>4. Guardar</strong>. Cada fila es una entrega/orden.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -484,7 +534,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
             )}
 
             <Card>
-              <CardHeader><CardTitle>Entrega / orden</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Entrega / orden — Paso 1</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p><strong>Número entrega:</strong> {selected.delivery.deliveryNumber}</p>
                 <p><strong>Dispensación (NroDocumento):</strong> {selected.delivery.documentNumber || '—'}</p>
@@ -527,29 +577,47 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
             {!isDeliveredTab && (
             <>
             <Card>
-              <CardHeader><CardTitle>Datos del paciente</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardHeader>
+                <CardTitle>Paso 2 — Llamar al paciente</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
                 <p><strong>Documento:</strong> {selected.delivery.patient.documentType} {selected.delivery.patient.documentId}</p>
                 <p><strong>Dirección:</strong> {selected.delivery.patient.address}</p>
                 <p><strong>Observaciones previas:</strong> {selected.delivery.observations || selected.delivery.patient.notes || '—'}</p>
-                <div className="flex flex-wrap gap-2 pt-2">
+                {hasDialed ? (
+                  <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-green-800">
+                    Marcación registrada
+                    {elapsedSec > 0 ? ` · Cronómetro: ${elapsedSec}s` : ''}
+                    {(selected.dialClickCount ?? 0) > 0 ? ` · Clics: ${selected.dialClickCount}` : ''}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+                    Pulse <strong>Llamar ahora</strong> antes de guardar el resultado.
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 pt-1">
                   {phones.map((ph) => (
-                    <a
+                    <Button
                       key={ph.label}
-                      href={`tel:${ph.value}`}
-                      className="inline-flex items-center gap-1 rounded-md border px-2 py-1 hover:bg-muted"
-                      onClick={() => setForm((f) => ({ ...f, phoneUsed: ph.value! }))}
+                      type="button"
+                      size="lg"
+                      disabled={isLocked || dialMutation.isPending}
+                      onClick={() => handleDial(ph.value!)}
+                      className="gap-2"
                     >
-                      <Phone className="h-3 w-3" />
-                      {ph.label}: {ph.value}
-                    </a>
+                      <Phone className="h-4 w-4" />
+                      Llamar ahora — {ph.label}: {ph.value}
+                    </Button>
                   ))}
+                  {phones.length === 0 && (
+                    <p className="text-muted-foreground">Sin teléfonos registrados. Agréguelos abajo.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader><CardTitle>Gestión de llamada</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Paso 3 — Resultado de la llamada</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
@@ -582,7 +650,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                     <Input type="time" disabled={isLocked} value={form.callTime} onChange={(e) => setForm({ ...form, callTime: e.target.value })} />
                   </div>
                   <div>
-                    <Label>Duración (seg)</Label>
+                    <Label>Duración (seg) — automática al marcar</Label>
                     <Input type="number" disabled={isLocked} value={form.durationSec} onChange={(e) => setForm({ ...form, durationSec: e.target.value })} />
                   </div>
                   <div>
@@ -594,6 +662,17 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                   <Label>Observaciones</Label>
                   <Textarea disabled={isLocked} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
                 </div>
+                {!hasDialed && (
+                  <div>
+                    <Label>Justificación si no pudo marcar (mín. 10 caracteres)</Label>
+                    <Textarea
+                      disabled={isLocked}
+                      placeholder="Ej: El paciente no tiene teléfono válido / número incorrecto en la base..."
+                      value={form.skipDialJustification}
+                      onChange={(e) => setForm({ ...form, skipDialJustification: e.target.value })}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -703,7 +782,7 @@ export function MyCallsPage({ embedded = false }: { embedded?: boolean }) {
                 onClick={() => updateMutation.mutate()}
               >
                 <Save className="mr-2 h-4 w-4" />
-                {updateMutation.isPending ? 'Guardando...' : 'Guardar gestión'}
+                {updateMutation.isPending ? 'Guardando...' : 'Paso 4 — Guardar y siguiente'}
               </Button>
               <Button
                 type="button"

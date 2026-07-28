@@ -74,9 +74,12 @@ export const callsApi = {
   stats: () => api.get('/api/calls/stats'),
   myCalls: (params?: Record<string, unknown>) => api.get('/api/calls/my', { params }),
   updateMyCall: (id: string, data: Record<string, unknown>) => api.patch(`/api/calls/my/${id}`, data),
+  registerDial: (id: string, phone?: string) => api.post(`/api/calls/my/${id}/dial`, { phone }),
   assign: (data: { deliveryIds: string[]; operatorUserId: string }) => api.post('/api/calls/assign', data),
   operators: () => api.get('/api/calls/operators'),
   managementStats: (params?: Record<string, unknown>) => api.get('/api/calls/management-stats', { params }),
+  operatorMonitoring: (params?: Record<string, unknown>) =>
+    api.get('/api/calls/operator-monitoring', { params }),
   register: (data: Record<string, unknown>) => api.post('/api/calls', data),
 };
 

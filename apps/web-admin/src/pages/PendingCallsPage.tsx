@@ -48,8 +48,8 @@ export function PendingCallsPage({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h2 className="text-3xl font-bold">Llamadas Pendientes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Solo entregas <strong>empacadas</strong> pueden asignarse. Flujo: Preparar pendientes → Empacado →
-            asignar operador → operador confirma → Asignaciones domiciliario.
+            Pasos: <strong>1. Seleccione entregas</strong> → <strong>2. Elija operador</strong> →{' '}
+            <strong>3. Asignar</strong>. Solo entregas empacadas.
           </p>
         </div>
       )}

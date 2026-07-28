@@ -41,8 +41,12 @@ const updateAssignmentSchema = z.object({
     callTime: z.string().optional(),
     durationSec: z.number().optional(),
     phoneUsed: z.string().optional(),
+    skipDialJustification: z.string().min(10).max(500).optional(),
     rescheduleDate: z.string().optional(),
     rescheduleTime: z.string().optional(),
+    action: z.enum(['CONFIRM', 'PENDING', 'DEACTIVATE', 'REACTIVATE', 'RESCHEDULE']).optional(),
+    deactivationReason: z.nativeEnum(DeactivationReason).optional(),
+    pendingSubreason: z.nativeEnum(PendingSubreason).optional(),
     patientUpdates: z
       .object({
         address: z.string().optional(),
@@ -113,6 +117,33 @@ router.patch('/my/:id', requirePermission('calls.write'), validate(updateAssignm
       req.body,
       isAdmin ? { bypassOperatorCheck: true, actingUserId: req.user!.sub } : undefined
     );
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/my/:id/dial', requirePermission('calls.write'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const isAdmin = req.user!.role === 'ADMIN';
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone : undefined;
+    const data = await callAssignmentService.registerDialClick(
+      routeParam(req.params.id),
+      req.user!.sub,
+      phone,
+      isAdmin ? { bypassOperatorCheck: true } : undefined
+    );
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/operator-monitoring', requirePermission('calls.read', 'dashboard.read', 'calls.assign'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined;
+    const dateTo = req.query.dateTo ? new Date(req.query.dateTo as string) : undefined;
+    const data = await callAssignmentService.getOperatorMonitoring(dateFrom, dateTo);
     res.json({ success: true, data });
   } catch (error) {
     next(error);
