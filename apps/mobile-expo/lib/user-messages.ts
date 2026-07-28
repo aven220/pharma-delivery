@@ -16,10 +16,7 @@ export function getUserFacingError(
       return 'La conexión tardó demasiado. Intente de nuevo.';
     }
     if (context === 'login') {
-      return (
-        'No se pudo alcanzar el servidor en la red local. ' +
-        'Verifique WiFi (misma red), que el API esté en :4410 y el firewall de Windows.'
-      );
+      return 'No se pudo conectar al servidor. Use la misma WiFi y verifique que el servicio esté iniciado.';
     }
     if (context === 'sync') {
       return 'No se pudo actualizar en este momento. Sus datos guardados siguen disponibles.';

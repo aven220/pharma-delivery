@@ -11,14 +11,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getApiErrorMessage, login, API_URL } from '../services/api';
+import { getApiErrorMessage, login } from '../services/api';
 import { useAuthStore } from '../store/auth.store';
 import { performFullSync } from '../sync/syncManager';
-import { isOnline } from '../utils/network';
-import { OFFLINE_LOGIN_MSG } from '../lib/user-messages';
 import { BrandConfig } from '../constants/labels';
 import { homeRouteForUser, isFieldWorker } from '../lib/roles';
-import axios from 'axios';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,21 +24,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [error, setError] = useState('');
-
-  const handleTestConnection = async () => {
-    setTesting(true);
-    setError('');
-    try {
-      const res = await axios.get(`${API_URL}/health`, { timeout: 8000 });
-      setError(`OK servidor: ${JSON.stringify(res.data).slice(0, 120)}`);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'No responde el /health del servidor.', 'login'));
-    } finally {
-      setTesting(false);
-    }
-  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -51,10 +34,7 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      if (!(await isOnline())) {
-        setError(OFFLINE_LOGIN_MSG);
-        return;
-      }
+      // Intentar login siempre: isOnline() falla en WiFi LAN sin salida a Internet
       await useAuthStore.getState().logout();
       const result = await login(email.trim(), password);
       await setAuth(result.user, result.tokens);
@@ -77,7 +57,6 @@ export default function LoginScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>{BrandConfig.appName}</Text>
         <Text style={styles.subtitle}>{BrandConfig.mobileSubtitle}</Text>
-        <Text style={styles.apiHint}>API: {API_URL}</Text>
 
         <TextInput
           style={styles.input}
@@ -118,23 +97,11 @@ export default function LoginScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading || testing}>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Ingresar</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={handleTestConnection}
-          disabled={loading || testing}
-        >
-          {testing ? (
-            <ActivityIndicator color="#2563eb" />
-          ) : (
-            <Text style={styles.testButtonText}>Probar conexión al servidor</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -154,8 +121,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: { fontSize: 28, fontWeight: 'bold', color: '#2563eb', textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#64748b', textAlign: 'center', marginBottom: 8 },
-  apiHint: { fontSize: 11, color: '#94a3b8', textAlign: 'center', marginBottom: 24 },
+  subtitle: { fontSize: 16, color: '#64748b', textAlign: 'center', marginBottom: 24 },
   input: {
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -185,14 +151,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  testButton: {
-    marginTop: 12,
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#2563eb',
-  },
-  testButtonText: { color: '#2563eb', fontSize: 14, fontWeight: '600' },
   error: { color: '#ef4444', textAlign: 'center', marginBottom: 8, fontSize: 13 },
 });

@@ -32,8 +32,8 @@ function writeEnv(path, content) {
 
 const cfg = loadHostConfig();
 const HOST = cfg.DEV_HOST || '192.168.20.26';
-const API_PORT = cfg.DEV_API_PORT || '4401';
-const WEB_PORT = cfg.DEV_WEB_PORT || '5173';
+const API_PORT = cfg.DEV_API_PORT || '4410';
+const WEB_PORT = cfg.DEV_WEB_PORT || '5517';
 const DB_PORT = cfg.DEV_DB_PORT || cfg.POSTGRES_HOST_PORT || '5433';
 const REDIS_PORT = cfg.REDIS_HOST_PORT || '6380';
 
