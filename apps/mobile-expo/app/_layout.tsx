@@ -10,6 +10,7 @@ import { isOnline } from '../utils/network';
 import { registerPushToken } from '../services/pushRegistration';
 import { getDatabase } from '../database';
 import { homeRouteForUser, isFieldWorker } from '../lib/roles';
+import { AppErrorBoundary } from '../components/AppErrorBoundary';
 
 const queryClient = new QueryClient();
 
@@ -85,17 +86,19 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthGuard>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="login" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="route/[id]" options={{ headerShown: true, title: 'Detalle de ruta' }} />
-          <Stack.Screen name="delivery/[id]" options={{ headerShown: true, title: 'Detalle de entrega' }} />
-          <Stack.Screen name="call/[id]" options={{ headerShown: true, title: 'Gestionar llamada' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </AuthGuard>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthGuard>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="login" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="route/[id]" options={{ headerShown: true, title: 'Detalle de ruta' }} />
+            <Stack.Screen name="delivery/[id]" options={{ headerShown: true, title: 'Detalle de entrega' }} />
+            <Stack.Screen name="call/[id]" options={{ headerShown: true, title: 'Gestionar llamada' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </AuthGuard>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }

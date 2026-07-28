@@ -53,7 +53,7 @@ function isLanHttpUrl(url) {
 function lanUrlFromDevHost() {
   const devHost = readEnvFile(path.join(repoRoot, 'config/dev-host.env'));
   const host = devHost.DEV_HOST;
-  const port = devHost.DEV_API_PORT || '4401';
+  const port = devHost.DEV_API_PORT || '4410';
   if (!host) return '';
   return `http://${host}:${port}`;
 }
@@ -87,7 +87,7 @@ if (!resolved) {
   console.error('');
   console.error('  Red local (HTTP):');
   console.error('    npm run build:apk:lan');
-  console.error('  o: EXPO_PUBLIC_API_URL=http://192.168.20.26:4401 npm run build:apk:lan');
+  console.error('  o: EXPO_PUBLIC_API_URL=http://192.168.20.26:4410 npm run build:apk:lan');
   console.error('');
   console.error('  Producción (HTTPS):');
   console.error('    EXPO_PUBLIC_API_URL=https://TU-SERVIDOR npm run build:apk');
@@ -106,7 +106,7 @@ if (!resolved.startsWith('https://') && !lanHttp) {
 if (lanMode && !lanHttp) {
   console.error('ERROR: build:apk:lan requiere URL HTTP con IP privada.');
   console.error(`  Valor: ${resolved}`);
-  console.error('  Ejemplo: http://192.168.20.26:4401');
+  console.error('  Ejemplo: http://192.168.20.26:4410');
   process.exit(1);
 }
 
