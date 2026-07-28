@@ -13,8 +13,9 @@ import { fetchMyCalls, getApiErrorMessage, type MobileCallAssignment } from '../
 import { CALL_QUEUE_STATUS_LABELS } from '../../constants/labels';
 
 function patientName(c: MobileCallAssignment) {
-  const p = c.delivery.patient;
-  return p.lastName === '.' ? p.firstName : `${p.firstName} ${p.lastName}`.trim();
+  const p = c?.delivery?.patient;
+  if (!p) return 'Paciente';
+  return p.lastName === '.' ? p.firstName : `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Paciente';
 }
 
 export default function CallsScreen() {
@@ -82,8 +83,8 @@ export default function CallsScreen() {
         }
         renderItem={({ item }) => {
           const phones = [
-            item.delivery.patient.phone,
-            item.delivery.patient.phoneAlt,
+            item.delivery?.patient?.phone,
+            item.delivery?.patient?.phoneAlt,
           ].filter(Boolean);
           return (
             <TouchableOpacity
@@ -92,8 +93,8 @@ export default function CallsScreen() {
             >
               <Text style={styles.name}>{patientName(item)}</Text>
               <Text style={styles.meta}>
-                Entrega {item.delivery.deliveryNumber}
-                {item.delivery.documentNumber ? ` · Doc. ${item.delivery.documentNumber}` : ''}
+                  Entrega {item.delivery?.deliveryNumber ?? '—'}
+                {item.delivery?.documentNumber ? ` · Doc. ${item.delivery.documentNumber}` : ''}
               </Text>
               <Text style={styles.meta}>
                 {CALL_QUEUE_STATUS_LABELS[item.status] || item.status}

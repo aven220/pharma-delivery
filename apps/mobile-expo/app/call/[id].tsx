@@ -51,7 +51,7 @@ export default function CallDetailScreen() {
         setStatus(found.status || 'PENDING');
         setManagementResult(found.managementResult || '');
         setObservations(found.observations || '');
-        setPhoneUsed(found.phoneUsed || found.delivery.patient.phone || '');
+        setPhoneUsed(found.phoneUsed || found.delivery?.patient?.phone || '');
         setHasDialed(!!(found.dialClickedAt || (found.dialClickCount ?? 0) > 0));
       }
     } catch (err) {
@@ -74,7 +74,7 @@ export default function CallDetailScreen() {
   }, [dialStartedAt]);
 
   const phones = useMemo(() => {
-    if (!call) return [] as Array<{ label: string; value: string }>;
+    if (!call?.delivery?.patient) return [] as Array<{ label: string; value: string }>;
     const p = call.delivery.patient;
     return [
       { label: 'Principal', value: p.phone || '' },
@@ -84,11 +84,13 @@ export default function CallDetailScreen() {
     ].filter((x) => x.value);
   }, [call]);
 
-  const patientName = call
-    ? call.delivery.patient.lastName === '.'
-      ? call.delivery.patient.firstName
-      : `${call.delivery.patient.firstName} ${call.delivery.patient.lastName}`.trim()
-    : '';
+  const patientName = (() => {
+    const p = call?.delivery?.patient;
+    if (!p) return '';
+    return p.lastName === '.'
+      ? p.firstName
+      : `${p.firstName || ''} ${p.lastName || ''}`.trim();
+  })();
 
   const handleDial = async (phone: string) => {
     if (!call) return;
@@ -167,16 +169,16 @@ export default function CallDetailScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.step}>Paso 1 — Paciente / entrega</Text>
       <View style={styles.card}>
-        <Text style={styles.name}>{patientName}</Text>
-        <Text style={styles.meta}>Doc. {call.delivery.patient.documentId}</Text>
-        <Text style={styles.meta}>Entrega {call.delivery.deliveryNumber}</Text>
-        <Text style={styles.meta}>{call.delivery.patient.address}</Text>
-        {(call.delivery.items?.length ?? 0) > 0 && (
+        <Text style={styles.name}>{patientName || 'Paciente'}</Text>
+        <Text style={styles.meta}>Doc. {call.delivery?.patient?.documentId ?? '—'}</Text>
+        <Text style={styles.meta}>Entrega {call.delivery?.deliveryNumber ?? '—'}</Text>
+        <Text style={styles.meta}>{call.delivery?.patient?.address ?? ''}</Text>
+        {(call.delivery?.items?.length ?? 0) > 0 && (
           <View style={styles.meds}>
             <Text style={styles.medsTitle}>Medicamentos</Text>
-            {call.delivery.items!.map((item) => (
+            {call.delivery!.items!.map((item) => (
               <Text key={item.id} style={styles.meta}>
-                · {item.medication.name} × {item.quantity}
+                · {item.medication?.name ?? 'Medicamento'} × {item.quantity}
               </Text>
             ))}
           </View>
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
   },
   dialText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   label: { fontSize: 13, fontWeight: '600', color: '#334155', marginTop: 10, marginBottom: 6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
   chip: {
     borderWidth: 1,
     borderColor: '#cbd5e1',
@@ -323,6 +325,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: '#fff',
+    marginRight: 8,
+    marginBottom: 8,
   },
   chipOn: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
   chipText: { fontSize: 12, color: '#334155' },

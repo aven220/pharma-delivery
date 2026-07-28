@@ -21,7 +21,9 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.name}>{user.firstName} {user.lastName}</Text>
           <Text style={styles.email}>{user.email}</Text>
-          <Text style={styles.role}>{ROLE_LABELS[user.role.name] || user.role.name}</Text>
+          <Text style={styles.role}>
+            {ROLE_LABELS[user.role?.name] || user.role?.name || 'Sin rol'}
+          </Text>
           <Text style={styles.version}>{BrandConfig.appName} v{appVersion}</Text>
         </View>
       )}

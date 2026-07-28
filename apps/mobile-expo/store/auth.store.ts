@@ -42,7 +42,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       const accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
       const userJson = await SecureStore.getItemAsync(USER_KEY);
-      const user = userJson ? JSON.parse(userJson) : null;
+      let user: UserDTO | null = null;
+      if (userJson) {
+        try {
+          const parsed = JSON.parse(userJson) as UserDTO;
+          if (parsed?.id && parsed?.role?.name) {
+            user = {
+              ...parsed,
+              permissions: Array.isArray(parsed.permissions) ? parsed.permissions : [],
+            };
+          }
+        } catch {
+          user = null;
+        }
+      }
       set({ accessToken, refreshToken, user, isLoading: false });
     } catch {
       set({ isLoading: false });
