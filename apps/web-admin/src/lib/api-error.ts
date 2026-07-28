@@ -5,7 +5,7 @@ export function getApiErrorMessage(error: unknown, fallback = 'Ocurrió un error
     if (!error.response) {
       if (error.code === 'ECONNABORTED') return 'La solicitud tardó demasiado. Intente de nuevo.';
       if (error.message?.includes('Network Error')) {
-        return 'No se pudo conectar con el API. Si el panel usa HTTPS, WEB_API_URL también debe ser HTTPS (sin :8080). Reconstruya web-admin.';
+        return 'No se pudo conectar con el API. Verifique que el backend esté activo (npm run dev:backend) y que use la misma red.';
       }
       return 'No se pudo conectar con el servidor. Verifique que el backend esté activo.';
     }

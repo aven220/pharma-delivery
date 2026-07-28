@@ -40,7 +40,7 @@ export function LoginPage() {
   const loginError = mutation.isError
     ? getApiErrorMessage(
         mutation.error,
-        'No se pudo conectar con el servidor. Verifique WEB_API_URL y que el servicio esté disponible por HTTPS.'
+        'No se pudo conectar con el servidor. Verifique que el backend esté activo (npm run dev:backend).'
       )
     : null;
 

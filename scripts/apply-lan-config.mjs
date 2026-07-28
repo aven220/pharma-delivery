@@ -78,9 +78,9 @@ APP_PUBLIC_URL=${WEB_URL}
 writeEnv(
   join(root, 'apps/web-admin/.env'),
   `# Panel admin — red local ${HOST}
-# Vacío = usa proxy Vite (mismo origen). Con URL = llama directo al API.
-VITE_API_URL=${API_URL}
-VITE_PROXY_TARGET=http://localhost:${API_PORT}
+# Vacío = proxy Vite al backend (recomendado en LAN). No use HTTPS en red local.
+VITE_API_URL=
+VITE_PROXY_TARGET=http://127.0.0.1:${API_PORT}
 `
 );
 
