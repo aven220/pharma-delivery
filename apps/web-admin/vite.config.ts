@@ -17,7 +17,7 @@ function readDevHostPort(): number {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
-  const proxyTarget = env.VITE_PROXY_TARGET || 'http://127.0.0.1:4401';
+  const proxyTarget = env.VITE_PROXY_TARGET || 'http://127.0.0.1:4410';
   const webPort = readDevHostPort();
 
   return {

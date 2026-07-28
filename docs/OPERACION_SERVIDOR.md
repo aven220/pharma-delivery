@@ -39,7 +39,7 @@ En el navegador:
 | Qué | URL |
 |-----|-----|
 | Panel | http://192.168.20.26:5517 |
-| API health | http://192.168.20.26:4400/health |
+| API health | http://192.168.20.26:4410/health |
 
 Debe responder `{"status":"ok",...}`.
 

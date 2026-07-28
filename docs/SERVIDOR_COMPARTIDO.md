@@ -21,7 +21,7 @@ A-AS Delivery está diseñado para **no interferir** con otros servicios en el m
 
 | Servicio | Puerto host | URL ejemplo |
 |----------|-------------|-------------|
-| API backend | **4400** | http://192.168.20.26:4400 |
+| API backend | **4410** | http://192.168.20.26:4410 |
 | Panel web | **5517** | http://192.168.20.26:5517 |
 | PostgreSQL (Docker) | **5433** | solo interno / Prisma |
 | Redis (Docker) | **6380** | solo interno / backend |
@@ -93,7 +93,7 @@ Sus puertos en `config/dev-host.env` **sí están en Git** — si cambió puerto
 - [ ] `docker compose up -d postgres redis` — solo pharma
 - [ ] `findstr DATABASE_URL apps\backend\.env` — debe mostrar `:5433`
 - [ ] `findstr REDIS apps\backend\.env` — debe mostrar `:6380`
-- [ ] Firewall: abrir **4400** y **5517** (red privada), no hace falta abrir 5433/6380 al exterior
+- [ ] Firewall: abrir **4410** y **5517** (red privada), no hace falta abrir 5433/6380 al exterior
 
 ---
 
