@@ -198,3 +198,59 @@ export async function fetchDeliveryEvidence(deliveryId: string) {
     fileUrl: string;
   }>;
 }
+
+export type MobileCallAssignment = {
+  id: string;
+  status: string;
+  managementResult?: string | null;
+  observations?: string | null;
+  callDate?: string | null;
+  callTime?: string | null;
+  durationSec?: number | null;
+  phoneUsed?: string | null;
+  dialClickedAt?: string | null;
+  dialClickCount?: number;
+  delivery: {
+    id: string;
+    deliveryNumber: string;
+    documentNumber?: string | null;
+    status: string;
+    observations?: string | null;
+    patient: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      documentId: string;
+      documentType?: string;
+      address: string;
+      phone?: string | null;
+      phoneAlt?: string | null;
+      phoneFamily?: string | null;
+      phoneAlternative?: string | null;
+      notes?: string | null;
+    };
+    items?: Array<{
+      id: string;
+      quantity: number;
+      medication: { name: string; code?: string; cum?: string | null };
+    }>;
+  };
+};
+
+export async function fetchMyCalls(limit = 50): Promise<MobileCallAssignment[]> {
+  const { data } = await api.get('/api/calls/my', { params: { limit } });
+  return (data.data || []) as MobileCallAssignment[];
+}
+
+export async function registerCallDial(assignmentId: string, phone?: string) {
+  const { data } = await api.post(`/api/calls/my/${assignmentId}/dial`, { phone });
+  return data.data;
+}
+
+export async function updateMyCall(
+  assignmentId: string,
+  payload: Record<string, unknown>
+) {
+  const { data } = await api.patch(`/api/calls/my/${assignmentId}`, payload);
+  return data.data;
+}

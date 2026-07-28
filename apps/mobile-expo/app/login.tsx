@@ -17,6 +17,7 @@ import { performFullSync } from '../sync/syncManager';
 import { isOnline } from '../utils/network';
 import { OFFLINE_LOGIN_MSG } from '../lib/user-messages';
 import { BrandConfig } from '../constants/labels';
+import { homeRouteForUser, isFieldWorker } from '../lib/roles';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,8 +43,10 @@ export default function LoginScreen() {
       await useAuthStore.getState().logout();
       const result = await login(email.trim(), password);
       await setAuth(result.user, result.tokens);
-      await performFullSync();
-      router.replace('/(tabs)/deliveries');
+      if (isFieldWorker(result.user)) {
+        await performFullSync();
+      }
+      router.replace(homeRouteForUser(result.user));
     } catch (err) {
       setError(getApiErrorMessage(err, 'No se pudo iniciar sesión.', 'login'));
     } finally {

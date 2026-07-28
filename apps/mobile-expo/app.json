@@ -3,7 +3,7 @@
     "name": "A-AS Delivery",
     "slug": "a-as-delivery",
     "owner": "aven22099",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "pharma-delivery",

@@ -212,3 +212,9 @@ export const notificationsApi = {
 export const auditApi = {
   list: (params?: Record<string, unknown>) => api.get('/api/audit-logs', { params }),
 };
+
+export const systemApi = {
+  queueResetPreview: () => api.get('/api/system/queue-reset/preview'),
+  queueReset: (data: { confirmationPhrase: string; password: string }) =>
+    api.post('/api/system/queue-reset', data),
+};

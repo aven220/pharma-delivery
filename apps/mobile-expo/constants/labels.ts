@@ -48,6 +48,27 @@ export const ROLE_LABELS: Record<string, string> = {
   DOMICILIARIO: 'Domiciliario',
   COURIER: 'Domiciliario',
   AUDITOR: 'Auditor',
+  DRIVER: 'Conductor',
+};
+
+export const CALL_QUEUE_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente',
+  CALLED: 'Llamado',
+  ANSWERED: 'Contestó',
+  NO_ANSWER: 'No contestó',
+  OFF: 'Apagado',
+  WRONG_NUMBER: 'Número incorrecto',
+  RESCHEDULE: 'Reagendar',
+  CONFIRMED: 'Confirmado',
+};
+
+export const CALL_MANAGEMENT_LABELS: Record<string, string> = {
+  CONFIRMED_FOR_DELIVERY: 'Confirmado para entrega',
+  REQUIRES_UPDATE: 'Requiere actualización',
+  RESCHEDULE: 'Reagendar',
+  NOT_LOCATED: 'No localizado',
+  WRONG_NUMBER: 'Número equivocado',
+  SERVICE_REJECTED: 'Rechaza servicio',
 };
 
 export const ROUTE_STATUS_LABELS: Record<string, string> = {

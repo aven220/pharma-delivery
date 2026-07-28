@@ -1,11 +1,13 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../../store/auth.store';
 import { BrandConfig, ROLE_LABELS } from '../../constants/labels';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const appVersion = Constants.expoConfig?.version ?? BrandConfig.version;
 
   const handleLogout = async () => {
     await logout();
@@ -20,7 +22,7 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{user.firstName} {user.lastName}</Text>
           <Text style={styles.email}>{user.email}</Text>
           <Text style={styles.role}>{ROLE_LABELS[user.role.name] || user.role.name}</Text>
-          <Text style={styles.version}>{BrandConfig.appName} v{BrandConfig.version}</Text>
+          <Text style={styles.version}>{BrandConfig.appName} v{appVersion}</Text>
         </View>
       )}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

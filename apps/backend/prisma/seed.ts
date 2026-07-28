@@ -16,6 +16,7 @@ const permissions = [
   { code: 'excel.read', name: 'Ver importaciones Excel', module: 'excel' },
   { code: 'excel.delete', name: 'Eliminar importaciones Excel', module: 'excel' },
   { code: 'excel.reprocess', name: 'Reprocesar importaciones Excel', module: 'excel' },
+  { code: 'system.reset_queue', name: 'Reiniciar cola de pendientes', module: 'system' },
   { code: 'calls.read', name: 'Ver llamadas', module: 'calls' },
   { code: 'calls.write', name: 'Registrar llamadas', module: 'calls' },
   { code: 'calls.assign', name: 'Asignar llamadas a operadores', module: 'calls' },

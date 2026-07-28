@@ -9,11 +9,12 @@ import { ensureValidSession } from '../services/api';
 import { isOnline } from '../utils/network';
 import { registerPushToken } from '../services/pushRegistration';
 import { getDatabase } from '../database';
+import { homeRouteForUser, isFieldWorker } from '../lib/roles';
 
 const queryClient = new QueryClient();
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { accessToken, isLoading, loadStoredAuth } = useAuthStore();
+  const { accessToken, isLoading, loadStoredAuth, user } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -38,7 +39,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!hasSession && !inAuth) {
         router.replace('/login');
       } else if (hasSession && inAuth) {
-        router.replace('/(tabs)/deliveries');
+        router.replace(homeRouteForUser(useAuthStore.getState().user));
       }
     })();
 
@@ -57,6 +58,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false;
+    const field = isFieldWorker(user);
 
     (async () => {
       if (await isOnline()) {
@@ -64,9 +66,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         if (cancelled || !ok) return;
         connectSocket();
         await registerPushToken().catch(() => {});
-        await performFullSync().catch(() => {});
+        if (field) {
+          await performFullSync().catch(() => {});
+        }
       }
-      startAutoSync();
+      if (field) startAutoSync();
     })();
 
     return () => {
@@ -74,7 +78,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       stopAutoSync();
       disconnectSocket();
     };
-  }, [accessToken, isLoading]);
+  }, [accessToken, isLoading, user]);
 
   return <>{children}</>;
 }
@@ -88,6 +92,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="route/[id]" options={{ headerShown: true, title: 'Detalle de ruta' }} />
           <Stack.Screen name="delivery/[id]" options={{ headerShown: true, title: 'Detalle de entrega' }} />
+          <Stack.Screen name="call/[id]" options={{ headerShown: true, title: 'Gestionar llamada' }} />
         </Stack>
         <StatusBar style="auto" />
       </AuthGuard>
