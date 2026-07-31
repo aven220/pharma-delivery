@@ -120,7 +120,13 @@ async function bootstrap() {
 
   httpServer.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`Server running on port ${env.PORT} (0.0.0.0)`);
+    logger.info(`LAN health: http://192.168.20.26:${env.PORT}/health`);
     logger.info(`Swagger docs: http://localhost:${env.PORT}/api/docs`);
+    if (env.PORT !== 4410) {
+      logger.warn(
+        `Puerto ${env.PORT} distinto del esperado 4410. Ejecute: npm run setup:lan y reinicie.`
+      );
+    }
   });
 }
 

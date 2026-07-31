@@ -8,7 +8,7 @@ type config\dev-host.env 2>nul | findstr /r "PORT="
 echo.
 
 echo === Estado en este servidor ===
-call :chk 4401 "API backend"
+call :chk 4410 "API backend"
 call :chk 5517 "Panel web"
 call :chk 5433 "PostgreSQL Docker"
 call :chk 6380 "Redis Docker"

@@ -1,7 +1,50 @@
+import { existsSync, readFileSync } from 'fs';
+import { join, resolve } from 'path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
+/** Sube directorios hasta encontrar config/dev-host.env (raíz del monorepo). */
+function findRepoRoot(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'config', 'dev-host.env'))) return dir;
+    const parent = resolve(dir, '..');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // tsx desde apps/backend
+  const fromBackend = resolve(process.cwd(), '../..');
+  if (existsSync(join(fromBackend, 'config', 'dev-host.env'))) return fromBackend;
+  return process.cwd();
+}
+
+const repoRoot = findRepoRoot();
+const backendEnvPath = join(repoRoot, 'apps', 'backend', '.env');
+
+dotenv.config({ path: backendEnvPath });
 dotenv.config();
+
+function readDevHostApiPort(): number | undefined {
+  const hostFile = join(repoRoot, 'config', 'dev-host.env');
+  if (!existsSync(hostFile)) return undefined;
+  for (const line of readFileSync(hostFile, 'utf8').split('\n')) {
+    const m = line.match(/^DEV_API_PORT=(.+)$/);
+    if (m) {
+      const n = Number(m[1].trim());
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Prioridad LAN: config/dev-host.env (en Git) gana sobre .env local viejo.
+ * Tras git pull, el API usa DEV_API_PORT aunque apps/backend/.env diga 4401.
+ */
+const lanPort = readDevHostApiPort();
+if (lanPort != null) {
+  process.env.PORT = String(lanPort);
+}
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

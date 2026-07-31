@@ -42,7 +42,7 @@ powershell -File scripts\check-ports.ps1
 2. Editar `config/dev-host.env` — cambiar solo el puerto en conflicto:
 
 ```env
-DEV_API_PORT=4401
+DEV_API_PORT=4410
 DEV_WEB_PORT=5518
 DEV_DB_PORT=5434
 REDIS_HOST_PORT=6381
