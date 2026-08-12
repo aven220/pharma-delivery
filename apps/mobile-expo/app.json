@@ -3,7 +3,7 @@
     "name": "A-AS Delivery",
     "slug": "a-as-delivery",
     "owner": "aven22099",
-    "version": "1.1.8",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "pharma-delivery",
@@ -18,9 +18,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pharma.delivery",
       "infoPlist": {
-        "NSCameraUsageDescription": "Necesitamos la cámara para capturar evidencia de entrega",
+        "NSCameraUsageDescription": "Necesitamos la cámara para capturar evidencia de entrega y llamadas",
+        "NSMicrophoneUsageDescription": "Necesitamos el micrófono para notas de voz durante la gestión de llamadas",
         "NSLocationWhenInUseUsageDescription": "Necesitamos tu ubicación para trazabilidad GPS",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Tracking GPS durante entregas",
+        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a fotos para evidencias de WhatsApp y entregas",
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": false
         }
@@ -35,10 +37,12 @@
       "usesCleartextTraffic": false,
       "permissions": [
         "CAMERA",
+        "RECORD_AUDIO",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "READ_MEDIA_IMAGES"
       ]
     },
     "plugins": [
@@ -60,6 +64,12 @@
         "expo-notifications",
         {
           "color": "#2563eb"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Permitir micrófono para notas de voz en gestión de llamadas"
         }
       ],
       "expo-sqlite",

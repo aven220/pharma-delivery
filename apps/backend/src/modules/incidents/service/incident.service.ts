@@ -86,8 +86,8 @@ export class EvidenceService {
       const photoCount = await prisma.evidence.count({
         where: { deliveryId: input.deliveryId, type: 'PHOTO', deletedAt: null },
       });
-      if (photoCount >= 2) {
-        throw new ValidationError('Máximo 2 fotografías permitidas por entrega');
+      if (photoCount >= 8) {
+        throw new ValidationError('Máximo 8 fotografías/capturas permitidas por entrega');
       }
     }
 

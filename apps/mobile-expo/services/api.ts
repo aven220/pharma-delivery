@@ -127,15 +127,18 @@ export async function uploadEvidence(
   type: string,
   uri: string,
   lat?: number,
-  lng?: number
+  lng?: number,
+  opts?: { mimeType?: string; fileName?: string }
 ) {
+  const mimeType = opts?.mimeType || 'image/jpeg';
+  const fileName = opts?.fileName || (mimeType.includes('audio') ? 'call-note.m4a' : 'evidence.jpg');
   const formData = new FormData();
   formData.append('deliveryId', deliveryId);
   formData.append('type', type);
   formData.append('file', {
     uri,
-    type: 'image/jpeg',
-    name: 'evidence.jpg',
+    type: mimeType,
+    name: fileName,
   } as unknown as Blob);
   if (lat) formData.append('lat', String(lat));
   if (lng) formData.append('lng', String(lng));
