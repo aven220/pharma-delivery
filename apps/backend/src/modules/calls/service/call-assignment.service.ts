@@ -32,6 +32,21 @@ function formatPatientDisplayName(patient: { firstName: string; lastName: string
     : `${patient.firstName} ${patient.lastName}`.trim();
 }
 
+function tomorrowDateOnly(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+const POSTPONE_RESULTS = new Set<CallManagementResult>([
+  'NOT_LOCATED',
+  'RESCHEDULE',
+  'REQUIRES_UPDATE',
+]);
+
+const POSTPONE_STATUSES = new Set<CallQueueStatus>(['NO_ANSWER', 'OFF', 'RESCHEDULE', 'CALLED']);
+
 const STATUS_TO_CALL_RESULT: Partial<Record<CallQueueStatus, CallResult>> = {
   ANSWERED: 'ANSWERED',
   NO_ANSWER: 'NO_ANSWER',
@@ -327,11 +342,22 @@ export class CallAssignmentService {
     const auditUserId = options?.actingUserId ?? operatorUserId;
     const callOperatorUserId = assignment.operatorUserId;
 
+    const shouldPostpone =
+      POSTPONE_RESULTS.has(input.managementResult as CallManagementResult) ||
+      POSTPONE_STATUSES.has(input.status as CallQueueStatus) ||
+      input.action === 'RESCHEDULE' ||
+      input.action === 'PENDING';
+
+    if (shouldPostpone && !input.rescheduleDate) {
+      input.rescheduleDate = tomorrowDateOnly();
+    }
+
     const isComplete =
-      input.managementResult !== undefined ||
-      input.action !== undefined ||
-      input.status === 'CONFIRMED' ||
-      ['WRONG_NUMBER', 'OFF'].includes(input.status || '');
+      input.managementResult === 'CONFIRMED_FOR_DELIVERY' ||
+      input.managementResult === 'SERVICE_REJECTED' ||
+      input.action === 'CONFIRM' ||
+      input.action === 'DEACTIVATE' ||
+      input.status === 'CONFIRMED';
 
     if (isComplete && !assignment.dialClickedAt && assignment.dialClickCount === 0) {
       const justification = input.skipDialJustification?.trim();
@@ -376,23 +402,30 @@ export class CallAssignmentService {
       });
       if (!operator) throw new NotFoundError('Operator');
 
-      if (input.status && input.status !== 'PENDING' && input.phoneUsed) {
-        const callResult = STATUS_TO_CALL_RESULT[input.status];
-        if (callResult) {
-          await tx.callHistory.create({
-            data: {
-              deliveryId: assignment.deliveryId,
-              patientId: assignment.delivery.patientId,
-              operatorId: operator.id,
-              phoneUsed: input.phoneUsed,
-              result: callResult,
-              durationSec: input.durationSec,
-              observations: input.observations,
-              rescheduleDate: input.rescheduleDate ? new Date(input.rescheduleDate) : undefined,
-              rescheduleTime: input.rescheduleTime,
-            },
-          });
-        }
+      const historyResult =
+        (input.status && STATUS_TO_CALL_RESULT[input.status]) ||
+        (input.managementResult === 'NOT_LOCATED' ? 'NO_ANSWER' : undefined) ||
+        (input.managementResult === 'RESCHEDULE' ? 'RESCHEDULE' : undefined) ||
+        (input.managementResult === 'WRONG_NUMBER' ? 'WRONG_NUMBER' : undefined) ||
+        (input.managementResult === 'CONFIRMED_FOR_DELIVERY' ? 'CONFIRMED' : undefined);
+
+      if (input.phoneUsed && historyResult) {
+        await tx.callHistory.create({
+          data: {
+            deliveryId: assignment.deliveryId,
+            patientId: assignment.delivery.patientId,
+            operatorId: operator.id,
+            phoneUsed: input.phoneUsed,
+            result: historyResult,
+            durationSec: input.durationSec,
+            observations: input.observations,
+            rescheduleDate: input.rescheduleDate ? new Date(input.rescheduleDate) : undefined,
+            rescheduleTime: input.rescheduleTime,
+          },
+        });
+      }
+
+      if (isComplete && input.phoneUsed && !shouldPostpone) {
         await deliveryStatusService.logStatusChange(tx, {
           deliveryId: assignment.deliveryId,
           fromStatus: assignment.delivery.status,
@@ -420,6 +453,24 @@ export class CallAssignmentService {
         await tx.delivery.update({
           where: { id: assignment.deliveryId },
           data: { status: 'CANCELLED', failureReason: input.observations },
+        });
+      } else if (input.rescheduleDate && shouldPostpone) {
+        await deliveryStatusService.logStatusChange(tx, {
+          deliveryId: assignment.deliveryId,
+          fromStatus: assignment.delivery.status,
+          toStatus: 'RESCHEDULED',
+          action: 'RESCHEDULE',
+          changedById: auditUserId,
+          observations: input.observations || 'Reintento al día siguiente',
+          pendingSubreason: 'RESCHEDULE_CALL',
+        });
+        await tx.delivery.update({
+          where: { id: assignment.deliveryId },
+          data: {
+            status: 'RESCHEDULED',
+            scheduledDate: new Date(input.rescheduleDate),
+            scheduledTime: input.rescheduleTime,
+          },
         });
       } else if (input.action === 'PENDING' && input.pendingSubreason) {
         await deliveryStatusService.logStatusChange(tx, {
@@ -463,41 +514,6 @@ export class CallAssignmentService {
           data: { status: 'CANCELLED' },
         });
       } else if (input.managementResult === 'WRONG_NUMBER') {
-        await deliveryStatusService.logStatusChange(tx, {
-          deliveryId: assignment.deliveryId,
-          fromStatus: assignment.delivery.status,
-          toStatus: 'PENDING_CALL',
-          action: 'SET_PENDING',
-          changedById: auditUserId,
-          observations: input.observations,
-          pendingSubreason: 'NO_ANSWER',
-        });
-        await tx.delivery.update({ where: { id: assignment.deliveryId }, data: { status: 'PENDING_CALL' } });
-      } else if (
-        input.managementResult === 'RESCHEDULE' ||
-        input.status === 'RESCHEDULE' ||
-        input.action === 'RESCHEDULE'
-      ) {
-        if (input.rescheduleDate) {
-          await deliveryStatusService.logStatusChange(tx, {
-            deliveryId: assignment.deliveryId,
-            fromStatus: assignment.delivery.status,
-            toStatus: 'RESCHEDULED',
-            action: 'RESCHEDULE',
-            changedById: auditUserId,
-            observations: input.observations,
-            pendingSubreason: 'RESCHEDULE_CALL',
-          });
-          await tx.delivery.update({
-            where: { id: assignment.deliveryId },
-            data: {
-              status: 'RESCHEDULED',
-              scheduledDate: new Date(input.rescheduleDate),
-              scheduledTime: input.rescheduleTime,
-            },
-          });
-        }
-      } else if (input.managementResult === 'NOT_LOCATED') {
         await deliveryStatusService.logStatusChange(tx, {
           deliveryId: assignment.deliveryId,
           fromStatus: assignment.delivery.status,

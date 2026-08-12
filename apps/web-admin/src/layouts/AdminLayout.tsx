@@ -27,34 +27,86 @@ interface NavItem {
   to: string;
   icon: React.ElementType;
   label: string;
-  show: boolean;
 }
 
 export function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { hasPermission, canAccessBulkImport, isAdmin } = usePermissions();
+  const role = user?.role.name ?? '';
 
-  const navItems: NavItem[] = [
-    { to: '/', icon: LayoutDashboard, label: 'Inicio', show: hasPermission('dashboard.read', 'audit.read') },
-    { to: '/pending-prep', icon: Package, label: 'Preparar pendientes', show: hasPermission('deliveries.read', 'deliveries.write') },
-    { to: '/prepare-today', icon: PackageCheck, label: 'Preparar hoy', show: hasPermission('deliveries.read', 'couriers.read', 'intermunicipal_routes.read') },
-    { to: '/users', icon: Users, label: 'Usuarios', show: isAdmin() },
-    { to: '/deliveries', icon: Package, label: 'Entregas', show: hasPermission('deliveries.read', 'audit.read') },
-    { to: '/patients/new', icon: UserPlus, label: 'Nuevo paciente', show: hasPermission('patients.write') },
-    { to: '/deliveries/new', icon: PlusCircle, label: 'Nueva entrega', show: hasPermission('deliveries.write') },
-    { to: '/excel', icon: FileSpreadsheet, label: 'Importaciones', show: canAccessBulkImport },
-    { to: '/calls', icon: Phone, label: 'Llamadas', show: hasPermission('calls.read', 'calls.write', 'calls.assign') },
-    { to: '/medications', icon: Pill, label: 'Medicamentos', show: hasPermission('medications.read', 'medications.write') },
-    { to: '/assignments', icon: Truck, label: 'Asignaciones', show: hasPermission('assignments.write') },
-    { to: '/courier-routes', icon: Route, label: 'Rutas diarias', show: hasPermission('assignments.write', 'couriers.read', 'deliveries.read') },
-    { to: '/route-municipalities', icon: Map, label: 'Municipios ruta', show: isAdmin() },
-    { to: '/intermunicipal-routes', icon: MapPinned, label: 'Rutas intermunicipales', show: hasPermission('intermunicipal_routes.read', 'deliveries.read') },
-    { to: '/couriers', icon: MapPinned, label: 'Domiciliarios', show: hasPermission('couriers.read', 'dashboard.read') },
-    { to: '/reports', icon: FileDown, label: 'Reportes', show: hasPermission('reports.export', 'dashboard.read') },
-    { to: '/notifications', icon: Bell, label: 'Notificaciones', show: true },
-    { to: '/audit', icon: Shield, label: 'Auditoría', show: hasPermission('audit.read', 'dashboard.read') },
-  ].filter((item) => item.show);
+  const fullNav: NavItem[] = [
+    ...(hasPermission('dashboard.read', 'audit.read')
+      ? [{ to: '/', icon: LayoutDashboard, label: 'Inicio' }]
+      : []),
+    ...(hasPermission('deliveries.write')
+      ? [{ to: '/pending-prep', icon: Package, label: 'Preparar pendientes' }]
+      : []),
+    ...(hasPermission('couriers.read') || hasPermission('intermunicipal_routes.write')
+      ? [{ to: '/prepare-today', icon: PackageCheck, label: 'Preparar hoy' }]
+      : []),
+    ...(isAdmin() ? [{ to: '/users', icon: Users, label: 'Usuarios' }] : []),
+    ...(hasPermission('deliveries.read') && role !== 'OPERATOR'
+      ? [{ to: '/deliveries', icon: Package, label: 'Entregas' }]
+      : []),
+    ...(hasPermission('patients.write') && role !== 'OPERATOR'
+      ? [{ to: '/patients/new', icon: UserPlus, label: 'Nuevo paciente' }]
+      : []),
+    ...(hasPermission('deliveries.write') && role !== 'OPERATOR'
+      ? [{ to: '/deliveries/new', icon: PlusCircle, label: 'Nueva entrega' }]
+      : []),
+    ...(canAccessBulkImport ? [{ to: '/excel', icon: FileSpreadsheet, label: 'Importaciones' }] : []),
+    ...(hasPermission('calls.read', 'calls.write', 'calls.assign')
+      ? [{ to: '/calls', icon: Phone, label: 'Llamadas' }]
+      : []),
+    ...(hasPermission('medications.write') || (hasPermission('medications.read') && role !== 'OPERATOR')
+      ? [{ to: '/medications', icon: Pill, label: 'Medicamentos' }]
+      : []),
+    ...(hasPermission('assignments.write')
+      ? [{ to: '/assignments', icon: Truck, label: 'Asignaciones' }]
+      : []),
+    ...(hasPermission('assignments.write') || hasPermission('couriers.read')
+      ? [{ to: '/courier-routes', icon: Route, label: 'Rutas diarias' }]
+      : []),
+    ...(isAdmin() ? [{ to: '/route-municipalities', icon: Map, label: 'Municipios ruta' }] : []),
+    ...(hasPermission('intermunicipal_routes.read') || hasPermission('intermunicipal_routes.write')
+      ? [{ to: '/intermunicipal-routes', icon: MapPinned, label: 'Rutas intermunicipales' }]
+      : []),
+    ...(hasPermission('couriers.read')
+      ? [{ to: '/couriers', icon: MapPinned, label: 'Domiciliarios' }]
+      : []),
+    ...(hasPermission('reports.export')
+      ? [{ to: '/reports', icon: FileDown, label: 'Reportes' }]
+      : []),
+    { to: '/notifications', icon: Bell, label: 'Notificaciones' },
+    ...(hasPermission('audit.read') ? [{ to: '/audit', icon: Shield, label: 'Auditoría' }] : []),
+  ];
+
+  const operatorNav: NavItem[] = [
+    { to: '/calls?tab=my-calls', icon: Phone, label: 'Mis llamadas' },
+    { to: '/notifications', icon: Bell, label: 'Notificaciones' },
+  ];
+
+  const auditorNav: NavItem[] = [
+    { to: '/', icon: LayoutDashboard, label: 'Inicio' },
+    { to: '/deliveries', icon: Package, label: 'Entregas' },
+    { to: '/calls?tab=history', icon: Phone, label: 'Llamadas' },
+    { to: '/reports', icon: FileDown, label: 'Reportes' },
+    { to: '/audit', icon: Shield, label: 'Auditoría' },
+  ];
+
+  const courierNav: NavItem[] = [
+    { to: '/deliveries', icon: Package, label: 'Mis entregas' },
+  ];
+
+  const navItems =
+    role === 'OPERATOR'
+      ? operatorNav
+      : role === 'AUDITOR'
+        ? auditorNav
+        : role === 'DOMICILIARIO'
+          ? courierNav
+          : fullNav;
 
   const handleLogout = () => {
     logout();

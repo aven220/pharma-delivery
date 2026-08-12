@@ -8,7 +8,7 @@ import { CallsPage } from '@/pages/CallsPage';
 const TABS = [
   { id: 'pending', label: 'Pendientes', permissions: ['calls.assign'] as const },
   { id: 'my-calls', label: 'Mis llamadas', permissions: ['calls.write'] as const },
-  { id: 'history', label: 'Historial', permissions: ['calls.read', 'calls.write'] as const },
+  { id: 'history', label: 'Historial', permissions: ['calls.assign', 'audit.read', 'dashboard.read'] as const },
 ] as const;
 
 type CallsTabId = (typeof TABS)[number]['id'];

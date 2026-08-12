@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: pharma-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: pharma
       POSTGRES_PASSWORD: pharma_secret
@@ -19,6 +20,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: pharma-redis
+    restart: unless-stopped
     ports:
       - "${REDIS_HOST_PORT:-6380}:6379"
     volumes:
@@ -29,7 +31,11 @@ services:
       timeout: 5s
       retries: 5
 
+  # NO usar en el servidor Windows compartido (chocan puertos 4000/5173).
+  # LAN: solo postgres+redis + npm run dev:backend / dev:web en 4410/5517.
+  # Activar solo con: docker compose --profile full-stack up -d
   backend:
+    profiles: ["full-stack"]
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
@@ -54,6 +60,7 @@ services:
         condition: service_healthy
 
   web-admin:
+    profiles: ["full-stack"]
     build:
       context: .
       dockerfile: apps/web-admin/Dockerfile

@@ -35,9 +35,18 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo Comprimiendo...
-powershell -NoProfile -Command "Compress-Archive -Path '%FILE%' -DestinationPath '%FILE%.zip' -Force"
-del "%FILE%"
+set UPLOADS=apps\backend\uploads
+set STAGE=%BACKUP_DIR%\stage_%TS%
+mkdir "%STAGE%" >nul 2>&1
+move "%FILE%" "%STAGE%\pharma_delivery.sql" >nul
+if exist "%UPLOADS%" (
+  echo Copiando evidencias / uploads...
+  xcopy "%UPLOADS%" "%STAGE%\uploads\" /E /I /Q >nul
+)
+
+echo Comprimiendo SQL + uploads...
+powershell -NoProfile -Command "Compress-Archive -Path '%STAGE%\*' -DestinationPath '%FILE%.zip' -Force"
+rmdir /s /q "%STAGE%"
 set FINAL=%FILE%.zip
 
 for %%A in ("%FINAL%") do echo.

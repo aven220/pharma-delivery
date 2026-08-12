@@ -57,16 +57,11 @@ const roles = [
     name: 'OPERATOR',
     description: 'Operador de call center',
     permissions: [
-      'deliveries.read',
-      'deliveries.write',
-      'assignments.write',
-      'couriers.read',
       'calls.read',
       'calls.write',
+      'patients.read',
       'patients.write',
-      'medications.read',
-      'intermunicipal_routes.read',
-      'intermunicipal_routes.add_deliveries',
+      'deliveries.read',
     ],
   },
   {

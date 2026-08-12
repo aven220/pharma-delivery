@@ -11,7 +11,11 @@ function permissionsOf(user: UserDTO | null | undefined): string[] {
 /** Operador de call center: gestiona llamadas desde la app. */
 export function isCallOperator(user: UserDTO | null | undefined): boolean {
   if (!user) return false;
-  if (roleName(user) === 'OPERATOR') return true;
+  const name = roleName(user);
+  if (name === 'OPERATOR') return true;
+  if (['ADMIN', 'SUPERVISOR', 'AUDITOR', 'DOMICILIARIO', 'COURIER', 'DRIVER'].includes(name)) {
+    return false;
+  }
   const perms = permissionsOf(user);
   return perms.includes('calls.write') && !perms.includes('courier.app');
 }

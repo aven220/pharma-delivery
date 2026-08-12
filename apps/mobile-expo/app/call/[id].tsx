@@ -125,7 +125,13 @@ export default function CallDetailScreen() {
     }
     setSaving(true);
     try {
-      await updateMyCall(call.id, {
+      const tomorrow = (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().slice(0, 10);
+      })();
+
+      const payload: Record<string, unknown> = {
         status,
         managementResult: managementResult || undefined,
         observations: observations || undefined,
@@ -134,8 +140,27 @@ export default function CallDetailScreen() {
         callDate: new Date().toISOString().slice(0, 10),
         callTime: new Date().toTimeString().slice(0, 5),
         skipDialJustification: !hasDialed ? skipDialJustification.trim() : undefined,
-        action: managementResult === 'CONFIRMED_FOR_DELIVERY' ? 'CONFIRM' : undefined,
-      });
+      };
+
+      if (managementResult === 'CONFIRMED_FOR_DELIVERY' || status === 'CONFIRMED') {
+        payload.action = 'CONFIRM';
+        payload.status = 'CONFIRMED';
+      } else if (managementResult === 'SERVICE_REJECTED') {
+        payload.action = 'DEACTIVATE';
+        payload.deactivationReason = 'TREATMENT_REJECTED';
+      } else if (
+        managementResult === 'NOT_LOCATED' ||
+        managementResult === 'RESCHEDULE' ||
+        status === 'NO_ANSWER' ||
+        status === 'OFF' ||
+        status === 'RESCHEDULE'
+      ) {
+        payload.action = 'RESCHEDULE';
+        payload.rescheduleDate = tomorrow;
+        payload.status = status === 'PENDING' ? 'NO_ANSWER' : status;
+      }
+
+      await updateMyCall(call.id, payload);
       Alert.alert('Listo', 'Gestión guardada.', [
         { text: 'OK', onPress: () => router.replace('/(tabs)/calls') },
       ]);
